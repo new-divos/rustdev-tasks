@@ -1,0 +1,41 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.autoSave": "onFocusChange",
+
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "rust-analyzer.rustfmt.enableRangeFormatting": true,
+    "[rust]": {
+      "editor.defaultFormatter": "matklad.rust-analyzer",
+      "editor.formatOnSave": true
+    },
+
+    "editor.minimap.enabled": false,
+
+    "workbench.colorCustomizations": {
+      "activityBar.activeBackground": "#f8dec6",
+      "activityBar.activeBorder": "#15aa5d",
+      "activityBar.background": "#f8dec6",
+      "activityBar.foreground": "#15202b",
+      "activityBar.inactiveForeground": "#15202b99",
+      "activityBarBadge.background": "#15aa5d",
+      "activityBarBadge.foreground": "#e7e7e7",
+      "sash.hoverBorder": "#f8dec6",
+      "statusBar.background": "#f2c399",
+      "statusBar.foreground": "#15202b",
+      "statusBarItem.hoverBackground": "#eca86c",
+      "statusBarItem.remoteBackground": "#f2c399",
+      "statusBarItem.remoteForeground": "#15202b",
+      "titleBar.activeBackground": "#f2c399",
+      "titleBar.activeForeground": "#15202b",
+      "titleBar.inactiveBackground": "#f2c39999",
+      "titleBar.inactiveForeground": "#15202b99"
+    },
+    "peacock.color": "#f2c399"
+  }
+}
