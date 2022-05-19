@@ -9,9 +9,8 @@
 
     "editor.formatOnSave": true,
     "editor.formatOnType": true,
-    "rust-analyzer.rustfmt.enableRangeFormatting": true,
     "[rust]": {
-      "editor.defaultFormatter": "matklad.rust-analyzer",
+      "editor.defaultFormatter": "rust-lang.rust-analyzer",
       "editor.formatOnSave": true
     },
 
@@ -36,6 +35,7 @@
       "titleBar.inactiveBackground": "#f2c39999",
       "titleBar.inactiveForeground": "#15202b99"
     },
-    "peacock.color": "#f2c399"
+    "peacock.color": "#f2c399",
+    "rust-analyzer.rustfmt.rangeFormatting.enable": true
   }
 }
