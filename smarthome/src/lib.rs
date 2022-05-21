@@ -32,7 +32,7 @@ impl SmartSocket {
     }
 
     ///
-    /// Отобразить информацию об "умной" розетке.
+    /// Получить информацию об "умной" розетке.
     ///
     pub fn info(&self) -> String {
         if self.state {
@@ -41,7 +41,7 @@ impl SmartSocket {
                 self.power
             )
         } else {
-            String::from("Розетка выключена")
+            "Розетка выключена".to_string()
         }
     }
 
@@ -86,10 +86,52 @@ impl SmartSocket {
 }
 
 ///
-/// Состояние по умолчанию для умной розетки.
+/// Состояние по умолчанию для "умной" розетки.
 ///
 impl Default for SmartSocket {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+///
+/// Структура, описывающая взаимодействие с "умным" термометром.
+///
+pub struct SmartThermometer {
+    ///
+    /// Текущее значение температуры.
+    ///
+    temperature: f64,
+}
+
+impl SmartThermometer {
+    ///
+    /// Создать термометр с заданным значением температуры.
+    ///
+    pub fn with_temperature(temperature: f64) -> Self {
+        SmartThermometer { temperature }
+    }
+
+    ///
+    /// Получить текущее значение температуры.
+    ///
+    pub fn temperature(&self) -> f64 {
+        self.temperature
+    }
+
+    ///
+    /// Получить информацию об "умном" термометре.
+    ///
+    pub fn info(&self) -> String {
+        format!("Текущая температура: {} °C", self.temperature)
+    }
+}
+
+///
+/// Состояние по умолчанию для "умного" термометра
+///
+impl Default for SmartThermometer {
+    fn default() -> Self {
+        Self::with_temperature(Default::default())
     }
 }

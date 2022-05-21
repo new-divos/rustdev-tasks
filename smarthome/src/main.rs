@@ -1,4 +1,4 @@
-use smarthome::SmartSocket;
+use smarthome::{SmartSocket, SmartThermometer};
 
 fn main() {
     let socket1 = SmartSocket::new();
@@ -12,4 +12,7 @@ fn main() {
 
     socket2.switch_on();
     println!("Информация о розетке 2: {}", socket2.info());
+
+    let thermometer = SmartThermometer::with_temperature(20.0);
+    println!("Информация о термометре: {}", thermometer.info());
 }
