@@ -4,6 +4,8 @@ use std::{error, fmt};
 pub enum Error {
     IllegalRoomName,
     IllegalDeviceName,
+    IllegalRoomId,
+    IllegalDeviceId,
 }
 
 impl error::Error for Error {}
@@ -19,6 +21,12 @@ impl fmt::Display for Error {
             }
             Error::IllegalDeviceName => {
                 write!(f, "Illegal device name")
+            }
+            Error::IllegalRoomId => {
+                write!(f, "Illegal room identifier")
+            }
+            Error::IllegalDeviceId => {
+                write!(f, "Illegal device identifier")
             }
         }
     }

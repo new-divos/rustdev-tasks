@@ -113,6 +113,16 @@ impl SmartRoom {
 
         self.devices = devices;
     }
+
+    ///
+    /// Запросить список идентификаторов и имен всех устройств.
+    ///
+    pub fn devices(&self) -> Vec<(Uuid, &str)> {
+        self.devices
+            .iter()
+            .map(|device| (device.id(), device.name()))
+            .collect()
+    }
 }
 
 ///
@@ -250,6 +260,80 @@ impl SmartHouse {
         }
 
         self.rooms = rooms;
+    }
+
+    ///
+    /// Добавить устройство к комнате с заданным идентификатором.
+    ///
+    pub fn add_device<T: 'static + Device>(
+        &mut self,
+        room_id: Uuid,
+        device: T,
+    ) -> Result<Uuid, Error> {
+        if let Some(room_ref) = self.get_mut(room_id) {
+            room_ref.add_device(device)
+        } else {
+            Err(Error::IllegalRoomId)
+        }
+    }
+
+    ///
+    /// Удалить устройство из комнаты с заданным идентификатором.
+    ///
+    pub fn remove_device(&mut self, room_id: Uuid, device_id: Uuid) {
+        if let Some(room_ref) = self.get_mut(room_id) {
+            room_ref.remove_device(device_id)
+        }
+    }
+
+    ///
+    /// Получить список идентификаторов и имен устройств для комнаты
+    /// с заданным идентификатором.
+    ///
+    pub fn devices(&self, room_id: Uuid) -> Result<Vec<(Uuid, &str)>, Error> {
+        if let Some(room_ref) = self.get(room_id) {
+            Ok(room_ref.devices())
+        } else {
+            Err(Error::IllegalRoomId)
+        }
+    }
+
+    ///
+    /// Получить информацию об устройстве по идентификатору комнаты
+    /// и идентификатору устройства.
+    ///
+    pub fn device_info(&self, room_id: Uuid, device_id: Uuid) -> Result<String, Error> {
+        if let Some(room_ref) = self.get(room_id) {
+            for device_ref in room_ref.devices.iter() {
+                if device_ref.id() == device_id {
+                    return Ok(format!("{}", *device_ref));
+                }
+            }
+
+            Err(Error::IllegalDeviceId)
+        } else {
+            Err(Error::IllegalRoomId)
+        }
+    }
+
+    ///
+    /// Получить информацию об устройстве по имени комнаты
+    /// и имени устройства.
+    ///
+    pub fn device_info_by_name(&self, room_name: &str, device_name: &str) -> Result<String, Error> {
+        for room_ref in self.rooms.iter() {
+            if room_ref.name() == room_name {
+                for device_ref in room_ref.devices.iter() {
+                    if device_ref.name() == device_name {
+                        return Ok(format!("{}", *device_ref));
+                    }
+                }
+
+                return Err(Error::IllegalDeviceName);
+            }
+        }
+
+        Err(Error::IllegalRoomName)
     }
 
     ///
