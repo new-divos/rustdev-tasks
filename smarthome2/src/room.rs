@@ -31,9 +31,9 @@ impl fmt::Display for SmartRoom {
     /// с помощью форматирования.
     ///
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut v = vec![format!("Комната {} ({}). Устройства: ", self.name, self.id)];
+        let mut v = vec![format!("Комната \"{}\" ({}). Устройства: ", self.name, self.id)];
         for device_ref in self.devices.iter() {
-            v.push(format!("\t- {};", *device_ref));
+            v.push(format!("\t- {}", *device_ref));
         }
 
         write!(f, "{}", v.join("\n"))
@@ -130,30 +130,34 @@ mod tests {
     fn smart_room_test() {
         let mut room1 = SmartRoom::new("Room1");
         assert_eq!(room1.name.as_str(), "Room1");
+        assert_eq!(room1.devices.len(), 0);
 
         let socket1 = SmartSocket::new("Socket1");
         let socket1_id = socket1.id();
         room1 += socket1;
+        assert_eq!(room1.devices.len(), 1);
 
         let thermometer1 = SmartThermometer::new("Thermometer1", 20.0);
         let thermometer1_id = thermometer1.id();
         room1 += thermometer1;
+        assert_eq!(room1.devices.len(), 2);
 
         for ((id1, name1), (id2, name2)) in room1
             .devices()
-            .zip([(socket1_id, "Socket1"), (thermometer1_id, "Thermometer1")].iter())
+            .zip([(socket1_id, "Socket1"), (thermometer1_id, "Thermometer1")])
         {
-            assert_eq!(id1, *id2);
-            assert_eq!(name1, *name2);
+            assert_eq!(id1, id2);
+            assert_eq!(name1, name2);
         }
 
         room1 -= thermometer1_id;
-        for ((id1, name1), (id2, name2)) in room1.devices().zip([(socket1_id, "Socket1")].iter()) {
-            assert_eq!(id1, *id2);
-            assert_eq!(name1, *name2);
+        assert_eq!(room1.devices.len(), 1);
+        for ((id1, name1), (id2, name2)) in room1.devices().zip([(socket1_id, "Socket1")]) {
+            assert_eq!(id1, id2);
+            assert_eq!(name1, name2);
         }
 
         room1 -= "Socket1";
-        assert_eq!(room1.devices().count(), 0);
+        assert_eq!(room1.devices.len(), 0);
     }
 }

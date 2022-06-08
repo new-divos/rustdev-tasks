@@ -35,7 +35,7 @@ impl fmt::Display for SmartSocket {
     ///
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut v = vec![format!(
-            "умная розетка {} ({}). Состояние: ",
+            "умная розетка \"{}\" ({}). Состояние: ",
             self.name, self.id
         )];
 

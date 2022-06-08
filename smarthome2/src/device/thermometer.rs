@@ -31,7 +31,7 @@ impl fmt::Display for SmartThermometer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "умный термометр {} ({}). Температура: {} °C.",
+            "умный термометр \"{}\" ({}). Температура: {} °C.",
             self.name, self.id, self.temperature
         )
     }

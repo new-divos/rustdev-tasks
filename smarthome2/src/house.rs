@@ -50,9 +50,9 @@ impl fmt::Display for SmartHouse {
     /// с помощью форматирования.
     ///
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut v = vec![format!("Умный дом {} ({})", self.name, self.id)];
+        let mut v = vec![format!("Умный дом \"{}\" ({}):", self.name, self.id)];
         for (idx, room) in self.rooms.iter().enumerate() {
-            v.push(format!("{} {}", idx + 1, *room));
+            v.push(format!("{}. {}", idx + 1, *room));
         }
 
         write!(f, "{}", v.join("\n\n"))
@@ -287,5 +287,49 @@ impl SmartHouse {
     ///
     pub fn iter_mut(&mut self) -> impl iter::Iterator<Item = &mut SmartRoom> {
         self.rooms.iter_mut()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn smart_house_test() {
+        let mut house1 = SmartHouse::new("House1");
+        assert_eq!(house1.name, "House1");
+        assert_eq!(house1.rooms.len(), 0);
+
+        let room1 = SmartRoom::new("Room1");
+        let room1_id = room1.id();
+        house1 += room1;
+        assert_eq!(house1.rooms.len(), 1);
+
+        let room2 = SmartRoom::new("Room2");
+        let room2_id = room2.id();
+        house1 += room2;
+        assert_eq!(house1.rooms.len(), 2);
+
+        let room2_ex = SmartRoom::new("Room2");
+        house1 += room2_ex;
+        assert_eq!(house1.rooms.len(), 2);
+
+        for ((id1, name1), (id2, name2)) in house1
+            .rooms()
+            .zip([(room1_id, "Room1"), (room2_id, "Room2")])
+        {
+            assert_eq!(id1, id2);
+            assert_eq!(name1, name2);
+        }
+
+        house1 -= room1_id;
+        assert_eq!(house1.rooms.len(), 1);
+        for ((id1, name1), (id2, name2)) in house1.rooms().zip([(room2_id, "Room2")]) {
+            assert_eq!(id1, id2);
+            assert_eq!(name1, name2);
+        }
+
+        house1 -= "Room2";
+        assert_eq!(house1.rooms.len(), 0);
     }
 }
