@@ -1,6 +1,6 @@
 use smarthome2::{
-    device::{socket::SmartSocket, thermometer::SmartThermometer, DeviceInfo},
-    house::SmartHouse,
+    device::{socket::SmartSocket, thermometer::SmartThermometer},
+    house::{DeviceInfo, SmartHouse},
     room::SmartRoom,
 };
 

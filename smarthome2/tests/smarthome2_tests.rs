@@ -3,8 +3,12 @@
 use uuid::Uuid;
 
 use smarthome2::{
-    device::{socket::SmartSocket, thermometer::SmartThermometer, Device, DeviceInfo},
-    house::{RoomGetter, SmartHouse},
+    device::{
+        socket::{SmartSocket, SwitchOffEvent, SwitchOnEvent},
+        thermometer::SmartThermometer,
+        Device, DeviceState, StateEvent,
+    },
+    house::{DeviceInfo, RoomGetter, SmartHouse},
     room::SmartRoom,
 };
 

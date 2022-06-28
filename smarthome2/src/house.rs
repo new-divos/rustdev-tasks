@@ -3,7 +3,7 @@ use std::{fmt, iter, ops};
 
 use uuid::Uuid;
 
-use crate::device::DeviceInfo;
+use crate::device::{DeviceState, Event};
 use crate::error::Error;
 use crate::room::SmartRoom;
 
@@ -22,6 +22,26 @@ pub trait RoomGetter<T> {
     /// Получить изменяемую ссылку на комнату "умного" дома.
     ///
     fn get_mut(&mut self, idx: T) -> Option<&mut Self::Output>;
+}
+
+///
+/// Типаж, описывающий получение информации об устройстве.
+///
+pub trait DeviceInfo<U, V> {
+    ///
+    /// Получить текстовую информацию об устройстве.
+    ///
+    fn info(&self, idx1: U, idx2: V) -> Result<String, Error>;
+}
+
+///
+/// Типаж, описывающий обработку события некоторым устройством.
+///
+pub trait DeviceNotifier<U, V> {
+    ///
+    /// Обработать событие заданным устройством.
+    ///
+    fn notify(&mut self, idx1: U, idx2: V, e: &dyn Event) -> Result<DeviceState, Error>;
 }
 
 ///
@@ -242,6 +262,106 @@ impl DeviceInfo<&str, &str> for SmartHouse {
     }
 }
 
+impl DeviceNotifier<Uuid, Uuid> for SmartHouse {
+    ///
+    /// Обработать событие заданным устройством по идентификатору комнаты
+    /// и идентификатору устройства.
+    ///
+    fn notify(
+        &mut self,
+        room_id: Uuid,
+        device_id: Uuid,
+        e: &dyn Event,
+    ) -> Result<DeviceState, Error> {
+        if let Some(room) = self.get_mut(room_id) {
+            for device_ref in room.devices.iter_mut() {
+                if device_ref.id() == device_id {
+                    return device_ref.notify(e);
+                }
+            }
+
+            Err(Error::IllegalDeviceId(device_id))
+        } else {
+            Err(Error::IllegalRoomId(room_id))
+        }
+    }
+}
+
+impl DeviceNotifier<Uuid, &str> for SmartHouse {
+    ///
+    /// Обработать событие заданным устройством по идентификатору комнаты
+    /// и имени устройства.
+    ///
+    fn notify(
+        &mut self,
+        room_id: Uuid,
+        device_name: &str,
+        e: &dyn Event,
+    ) -> Result<DeviceState, Error> {
+        if let Some(room) = self.get_mut(room_id) {
+            for device_ref in room.devices.iter_mut() {
+                if device_ref.name() == device_name {
+                    return device_ref.notify(e);
+                }
+            }
+
+            Err(Error::IllegalDeviceName(device_name.to_owned()))
+        } else {
+            Err(Error::IllegalRoomId(room_id))
+        }
+    }
+}
+
+impl DeviceNotifier<&str, Uuid> for SmartHouse {
+    ///
+    /// Обработать событие заданным устройством по имени комнаты
+    /// и идентификатору устройства.
+    ///
+    fn notify(
+        &mut self,
+        room_name: &str,
+        device_id: Uuid,
+        e: &dyn Event,
+    ) -> Result<DeviceState, Error> {
+        if let Some(room) = self.get_mut(room_name) {
+            for device_ref in room.devices.iter_mut() {
+                if device_ref.id() == device_id {
+                    return device_ref.notify(e);
+                }
+            }
+
+            Err(Error::IllegalDeviceId(device_id))
+        } else {
+            Err(Error::IllegalRoomName(room_name.to_owned()))
+        }
+    }
+}
+
+impl DeviceNotifier<&str, &str> for SmartHouse {
+    ///
+    /// Обработать событие заданным устройством по имени комнаты
+    /// и имени устройства.
+    ///
+    fn notify(
+        &mut self,
+        room_name: &str,
+        device_name: &str,
+        e: &dyn Event,
+    ) -> Result<DeviceState, Error> {
+        if let Some(room) = self.get_mut(room_name) {
+            for device_ref in room.devices.iter_mut() {
+                if device_ref.name() == device_name {
+                    return device_ref.notify(e);
+                }
+            }
+
+            Err(Error::IllegalDeviceName(device_name.to_owned()))
+        } else {
+            Err(Error::IllegalRoomName(room_name.to_owned()))
+        }
+    }
+}
+
 impl SmartHouse {
     ///
     /// Создать "умный" дом с заданным именем.
@@ -287,6 +407,23 @@ impl SmartHouse {
     ///
     pub fn iter_mut(&mut self) -> impl iter::Iterator<Item = &mut SmartRoom> {
         self.rooms.iter_mut()
+    }
+
+    ///
+    /// Обработать событие всеми устройствами "умного" дома.
+    ///
+    pub fn notify_all(&mut self, e: &dyn Event) -> Vec<DeviceState> {
+        let mut result: Vec<DeviceState> = Vec::new();
+        for room_ref in self.rooms.iter_mut() {
+            for device_ref in room_ref.devices.iter_mut() {
+                if let Ok(device_state) = device_ref.notify(e) {
+                    result.push(device_state);
+                }
+            }
+        }
+
+        result.shrink_to_fit();
+        result
     }
 }
 

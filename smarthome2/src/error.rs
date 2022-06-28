@@ -8,6 +8,7 @@ pub enum Error {
     IllegalDeviceName(String),
     IllegalRoomId(Uuid),
     IllegalDeviceId(Uuid),
+    NotImplementedEvent(Uuid),
 }
 
 impl error::Error for Error {}
@@ -29,6 +30,9 @@ impl fmt::Display for Error {
             }
             Error::IllegalDeviceId(id) => {
                 write!(f, "Illegal device identifier {}", id)
+            }
+            Error::NotImplementedEvent(id) => {
+                write!(f, "The event {} is not implemented", id)
             }
         }
     }

@@ -8,6 +8,16 @@ pub mod socket;
 pub mod thermometer;
 
 ///
+/// Типаж, описывающий событие.
+///
+pub trait Event {
+    ///
+    /// Получить идентификатор класса события.
+    ///
+    fn id(&self) -> Uuid;
+}
+
+///
 /// Типаж, описывающий устройство.
 ///
 pub trait Device: fmt::Display {
@@ -20,14 +30,139 @@ pub trait Device: fmt::Display {
     /// Получить имя устройства.
     ///
     fn name(&self) -> &str;
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, Error>;
 }
 
 ///
-/// Типаж, описывающий информацию об устройстве.
+/// Структура, содержащая состояние устройства после обработки
+/// события.
 ///
-pub trait DeviceInfo<U, V> {
+#[derive(Debug, Clone, Copy)]
+pub struct DeviceState {
+    // Идентификатор устройства.
+    device_id: Uuid,
+    // Идентификатор события.
+    event_id: Uuid,
+
+    // Измеряемая температура.
+    themperature: Option<f64>,
+    // Устройства находится во включенном состоянии.
+    enabled: Option<bool>,
+    // Потребляемая мощность.
+    power: Option<f64>,
+}
+
+impl DeviceState {
     ///
-    /// Получить текстовую информацию об устройстве.
+    /// Получить состояние устройства для розетки.
     ///
-    fn info(&self, idx1: U, idx2: V) -> Result<String, Error>;
+    #[inline]
+    pub fn for_socket(device_id: Uuid, event_id: Uuid, enabled: bool, power: f64) -> Self {
+        Self {
+            device_id,
+            event_id,
+            themperature: None,
+            enabled: Some(enabled),
+            power: if enabled && power >= 0.0 {
+                Some(power)
+            } else {
+                None
+            },
+        }
+    }
+
+    ///
+    /// Получить состояние устройства для термометра.
+    ///
+    #[inline]
+    pub fn for_thermometer(device_id: Uuid, event_id: Uuid, themperature: f64) -> Self {
+        Self {
+            device_id,
+            event_id,
+            themperature: Some(themperature),
+            enabled: None,
+            power: None,
+        }
+    }
+
+    ///
+    /// Получить идентификатор устройства.
+    ///
+    #[inline]
+    pub fn device_id(&self) -> Uuid {
+        self.device_id
+    }
+
+    ///
+    /// Получить идентификатор класса события.
+    ///
+    #[inline]
+    pub fn event_id(&self) -> Uuid {
+        self.event_id
+    }
+
+    ///
+    /// Получить измеряемую температуру устройства.
+    ///
+    #[inline]
+    pub fn themperature(&self) -> Option<f64> {
+        self.themperature
+    }
+
+    ///
+    /// Определить, включено ли устройство.
+    ///
+    #[inline]
+    pub fn enabled(&self) -> Option<bool> {
+        self.enabled
+    }
+
+    ///
+    /// Получить потребляемую мощность.
+    ///
+    #[inline]
+    pub fn power(&self) -> Option<f64> {
+        self.power
+    }
+}
+
+///
+/// Событие, для получение текущего состояния устройства.
+///
+pub struct StateEvent {}
+
+impl Event for StateEvent {
+    ///
+    /// Получить идентификатор класса события.
+    ///
+    fn id(&self) -> Uuid {
+        Self::ID
+    }
+}
+
+impl Default for StateEvent {
+    ///
+    /// Экземпляр события по умолчанию.
+    ///
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl StateEvent {
+    // Идентификатор класса события.
+    pub(crate) const ID: Uuid = uuid::uuid!("c346ee2a-4cd1-4e46-8ca7-5b329721187e");
+
+    ///
+    /// Создать событие, для получения текущего состояния устройства.
+    ///
+    #[inline]
+    pub fn new() -> Self {
+        Self {}
+    }
 }

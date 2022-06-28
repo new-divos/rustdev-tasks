@@ -2,7 +2,10 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::device::Device;
+use crate::{
+    device::{Device, DeviceState, Event, StateEvent},
+    error::Error,
+};
 
 ///
 /// Структура, описывающая взаимодействие с "умным" термометром.
@@ -51,6 +54,21 @@ impl Device for SmartThermometer {
     fn name(&self) -> &str {
         self.name.as_str()
     }
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, Error> {
+        if e.id() == StateEvent::ID {
+            Ok(DeviceState::for_thermometer(
+                self.id(),
+                e.id(),
+                self.temperature(),
+            ))
+        } else {
+            Err(Error::NotImplementedEvent(e.id()))
+        }
+    }
 }
 
 impl SmartThermometer {
@@ -58,7 +76,7 @@ impl SmartThermometer {
     /// Создать термометр с заданным значением температуры.
     ///
     pub fn new(name: &str, temperature: f64) -> Self {
-        SmartThermometer {
+        Self {
             id: Uuid::new_v4(),
             name: name.to_string(),
             temperature,
