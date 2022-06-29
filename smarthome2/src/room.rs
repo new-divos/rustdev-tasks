@@ -31,7 +31,10 @@ impl fmt::Display for SmartRoom {
     /// с помощью форматирования.
     ///
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut v = vec![format!("Комната \"{}\" ({}). Устройства: ", self.name, self.id)];
+        let mut v = vec![format!(
+            "Комната \"{}\" ({}). Устройства: ",
+            self.name, self.id
+        )];
         for device_ref in self.devices.iter() {
             v.push(format!("\t- {}", *device_ref));
         }

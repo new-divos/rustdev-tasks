@@ -1,14 +1,16 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+
 use uuid::Uuid;
 
 use smarthome2::{
     device::{
         socket::{SmartSocket, SwitchOffEvent, SwitchOnEvent},
         thermometer::SmartThermometer,
-        Device, DeviceState, StateEvent,
+        Device, StateEvent,
     },
-    house::{DeviceInfo, RoomGetter, SmartHouse},
+    house::{DeviceInfo, DeviceNotifier, RoomGetter, SmartHouse},
     room::SmartRoom,
 };
 
@@ -62,6 +64,8 @@ fn smart_home_test() {
     assert_eq!(room_ref.name(), "Room1");
 
     let thermometer3 = SmartThermometer::new("Thermometer3", 30.0);
+    let thermometer3_id = thermometer3.id();
+
     *room_ref += thermometer3;
     assert_eq!(room_ref.devices().count(), 3);
     assert!(room_ref.devices().any(|(_, name)| name == "Thermometer3"));
@@ -95,4 +99,96 @@ fn smart_home_test() {
     assert!(house1.info("Room1", "Mixer").is_err());
     assert!(house1.info("Room1814", Uuid::new_v4()).is_err());
     assert!(house1.info("Room1814", "Mixer").is_err());
+
+    let state = house1
+        .notify(room1_id, socket1_id, &StateEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify(room1_id, socket1_id, &SwitchOnEvent::new())
+        .unwrap();
+    assert!(state.enabled().unwrap());
+
+    let state = house1
+        .notify(room1_id, socket1_id, &SwitchOffEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify(room1_id, thermometer1_id, &StateEvent::new())
+        .unwrap();
+    assert_eq!(state.themperature().unwrap(), 20.0);
+
+    let state = house1
+        .notify(room1_id, "Socket1", &StateEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify(room1_id, "Socket1", &SwitchOnEvent::new())
+        .unwrap();
+    assert!(state.enabled().unwrap());
+
+    let state = house1
+        .notify(room1_id, "Socket1", &SwitchOffEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify(room1_id, "Thermometer1", &StateEvent::new())
+        .unwrap();
+    assert_eq!(state.themperature().unwrap(), 20.0);
+
+    let state = house1
+        .notify("Room1", socket1_id, &StateEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify("Room1", socket1_id, &SwitchOnEvent::new())
+        .unwrap();
+    assert!(state.enabled().unwrap());
+
+    let state = house1
+        .notify("Room1", socket1_id, &SwitchOffEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify("Room1", thermometer1_id, &StateEvent::new())
+        .unwrap();
+    assert_eq!(state.themperature().unwrap(), 20.0);
+
+    let state = house1
+        .notify("Room1", "Socket1", &StateEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify("Room1", "Socket1", &SwitchOnEvent::new())
+        .unwrap();
+    assert!(state.enabled().unwrap());
+
+    let state = house1
+        .notify("Room1", "Socket1", &SwitchOffEvent::new())
+        .unwrap();
+    assert!(!state.enabled().unwrap());
+
+    let state = house1
+        .notify("Room1", "Thermometer1", &StateEvent::new())
+        .unwrap();
+    assert_eq!(state.themperature().unwrap(), 20.0);
+
+    let themperature_info: HashMap<Uuid, f64> = house1
+        .notify_all(&StateEvent::new())
+        .filter_map(|s| {
+            s.themperature()
+                .as_ref()
+                .map(|themperature| (s.device_id(), *themperature))
+        })
+        .collect();
+    assert_eq!(themperature_info[&thermometer1_id], 20.0);
+    assert_eq!(themperature_info[&thermometer2_id], 25.0);
+    assert_eq!(themperature_info[&thermometer3_id], 30.0);
 }

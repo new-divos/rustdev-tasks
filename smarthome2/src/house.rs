@@ -412,18 +412,15 @@ impl SmartHouse {
     ///
     /// Обработать событие всеми устройствами "умного" дома.
     ///
-    pub fn notify_all(&mut self, e: &dyn Event) -> Vec<DeviceState> {
-        let mut result: Vec<DeviceState> = Vec::new();
-        for room_ref in self.rooms.iter_mut() {
-            for device_ref in room_ref.devices.iter_mut() {
-                if let Ok(device_state) = device_ref.notify(e) {
-                    result.push(device_state);
-                }
-            }
-        }
-
-        result.shrink_to_fit();
-        result
+    pub fn notify_all<'a>(
+        &'a mut self,
+        e: &'a dyn Event,
+    ) -> impl iter::Iterator<Item = DeviceState> + 'a {
+        self.rooms
+            .iter_mut()
+            .flat_map(|it| it.devices.iter_mut())
+            .map(|device_ref| device_ref.notify(e))
+            .filter_map(|r| r.ok())
     }
 }
 
