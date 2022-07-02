@@ -2,7 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::error::Error;
+use crate::error::DeviceError;
 
 pub mod socket;
 pub mod thermometer;
@@ -34,7 +34,7 @@ pub trait Device: fmt::Display {
     ///
     /// Обработать событие устройством.
     ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, Error>;
+    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError>;
 }
 
 ///

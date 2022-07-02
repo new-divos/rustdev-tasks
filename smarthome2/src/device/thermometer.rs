@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     device::{Device, DeviceState, Event, StateEvent},
-    error::Error,
+    error::DeviceError,
 };
 
 ///
@@ -58,7 +58,7 @@ impl Device for SmartThermometer {
     ///
     /// Обработать событие устройством.
     ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, Error> {
+    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
         if e.id() == StateEvent::ID {
             Ok(DeviceState::for_thermometer(
                 self.id(),
@@ -66,7 +66,7 @@ impl Device for SmartThermometer {
                 self.temperature(),
             ))
         } else {
-            Err(Error::NotImplementedEvent(e.id()))
+            Err(DeviceError::NotImplementedEvent(e.id()))
         }
     }
 }

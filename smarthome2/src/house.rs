@@ -4,7 +4,7 @@ use std::{fmt, iter, ops};
 use uuid::Uuid;
 
 use crate::device::{DeviceState, Event};
-use crate::error::Error;
+use crate::error::DeviceError;
 use crate::room::SmartRoom;
 
 ///
@@ -31,7 +31,7 @@ pub trait DeviceInfo<U, V> {
     ///
     /// Получить текстовую информацию об устройстве.
     ///
-    fn info(&self, idx1: U, idx2: V) -> Result<String, Error>;
+    fn info(&self, idx1: U, idx2: V) -> Result<String, DeviceError>;
 }
 
 ///
@@ -41,7 +41,7 @@ pub trait DeviceNotifier<U, V> {
     ///
     /// Обработать событие заданным устройством.
     ///
-    fn notify(&mut self, idx1: U, idx2: V, e: &dyn Event) -> Result<DeviceState, Error>;
+    fn notify(&mut self, idx1: U, idx2: V, e: &dyn Event) -> Result<DeviceState, DeviceError>;
 }
 
 ///
@@ -187,7 +187,7 @@ impl DeviceInfo<Uuid, Uuid> for SmartHouse {
     /// Получить информацию об устройстве по идентификатору комнаты
     /// и идентификатору устройства.
     ///
-    fn info(&self, room_id: Uuid, device_id: Uuid) -> Result<String, Error> {
+    fn info(&self, room_id: Uuid, device_id: Uuid) -> Result<String, DeviceError> {
         if let Some(room) = self.get(room_id) {
             for device_ref in room.devices.iter() {
                 if device_ref.id() == device_id {
@@ -195,9 +195,9 @@ impl DeviceInfo<Uuid, Uuid> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceId(device_id))
+            Err(DeviceError::IllegalDeviceId(device_id))
         } else {
-            Err(Error::IllegalRoomId(room_id))
+            Err(DeviceError::IllegalRoomId(room_id))
         }
     }
 }
@@ -207,7 +207,7 @@ impl DeviceInfo<Uuid, &str> for SmartHouse {
     /// Получить информацию об устройстве по идентификатору комнаты
     /// и имени устройства.
     ///
-    fn info(&self, room_id: Uuid, device_name: &str) -> Result<String, Error> {
+    fn info(&self, room_id: Uuid, device_name: &str) -> Result<String, DeviceError> {
         if let Some(room) = self.get(room_id) {
             for device_ref in room.devices.iter() {
                 if device_ref.name() == device_name {
@@ -215,9 +215,9 @@ impl DeviceInfo<Uuid, &str> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceName(device_name.to_owned()))
+            Err(DeviceError::IllegalDeviceName(device_name.to_owned()))
         } else {
-            Err(Error::IllegalRoomId(room_id))
+            Err(DeviceError::IllegalRoomId(room_id))
         }
     }
 }
@@ -227,7 +227,7 @@ impl DeviceInfo<&str, Uuid> for SmartHouse {
     /// Получить информацию об устройстве по имени комнаты
     /// и идентификатору устройства.
     ///
-    fn info(&self, room_name: &str, device_id: Uuid) -> Result<String, Error> {
+    fn info(&self, room_name: &str, device_id: Uuid) -> Result<String, DeviceError> {
         if let Some(room) = self.get(room_name) {
             for device_ref in room.devices.iter() {
                 if device_ref.id() == device_id {
@@ -235,9 +235,9 @@ impl DeviceInfo<&str, Uuid> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceId(device_id))
+            Err(DeviceError::IllegalDeviceId(device_id))
         } else {
-            Err(Error::IllegalRoomName(room_name.to_owned()))
+            Err(DeviceError::IllegalRoomName(room_name.to_owned()))
         }
     }
 }
@@ -247,7 +247,7 @@ impl DeviceInfo<&str, &str> for SmartHouse {
     /// Получить информацию об устройстве по имени комнаты
     /// и идентификатору устройства.
     ///
-    fn info(&self, room_name: &str, device_name: &str) -> Result<String, Error> {
+    fn info(&self, room_name: &str, device_name: &str) -> Result<String, DeviceError> {
         if let Some(room) = self.get(room_name) {
             for device_ref in room.devices.iter() {
                 if device_ref.name() == device_name {
@@ -255,9 +255,9 @@ impl DeviceInfo<&str, &str> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceName(device_name.to_owned()))
+            Err(DeviceError::IllegalDeviceName(device_name.to_owned()))
         } else {
-            Err(Error::IllegalRoomName(room_name.to_owned()))
+            Err(DeviceError::IllegalRoomName(room_name.to_owned()))
         }
     }
 }
@@ -272,7 +272,7 @@ impl DeviceNotifier<Uuid, Uuid> for SmartHouse {
         room_id: Uuid,
         device_id: Uuid,
         e: &dyn Event,
-    ) -> Result<DeviceState, Error> {
+    ) -> Result<DeviceState, DeviceError> {
         if let Some(room) = self.get_mut(room_id) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.id() == device_id {
@@ -280,9 +280,9 @@ impl DeviceNotifier<Uuid, Uuid> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceId(device_id))
+            Err(DeviceError::IllegalDeviceId(device_id))
         } else {
-            Err(Error::IllegalRoomId(room_id))
+            Err(DeviceError::IllegalRoomId(room_id))
         }
     }
 }
@@ -297,7 +297,7 @@ impl DeviceNotifier<Uuid, &str> for SmartHouse {
         room_id: Uuid,
         device_name: &str,
         e: &dyn Event,
-    ) -> Result<DeviceState, Error> {
+    ) -> Result<DeviceState, DeviceError> {
         if let Some(room) = self.get_mut(room_id) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.name() == device_name {
@@ -305,9 +305,9 @@ impl DeviceNotifier<Uuid, &str> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceName(device_name.to_owned()))
+            Err(DeviceError::IllegalDeviceName(device_name.to_owned()))
         } else {
-            Err(Error::IllegalRoomId(room_id))
+            Err(DeviceError::IllegalRoomId(room_id))
         }
     }
 }
@@ -322,7 +322,7 @@ impl DeviceNotifier<&str, Uuid> for SmartHouse {
         room_name: &str,
         device_id: Uuid,
         e: &dyn Event,
-    ) -> Result<DeviceState, Error> {
+    ) -> Result<DeviceState, DeviceError> {
         if let Some(room) = self.get_mut(room_name) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.id() == device_id {
@@ -330,9 +330,9 @@ impl DeviceNotifier<&str, Uuid> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceId(device_id))
+            Err(DeviceError::IllegalDeviceId(device_id))
         } else {
-            Err(Error::IllegalRoomName(room_name.to_owned()))
+            Err(DeviceError::IllegalRoomName(room_name.to_owned()))
         }
     }
 }
@@ -347,7 +347,7 @@ impl DeviceNotifier<&str, &str> for SmartHouse {
         room_name: &str,
         device_name: &str,
         e: &dyn Event,
-    ) -> Result<DeviceState, Error> {
+    ) -> Result<DeviceState, DeviceError> {
         if let Some(room) = self.get_mut(room_name) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.name() == device_name {
@@ -355,9 +355,9 @@ impl DeviceNotifier<&str, &str> for SmartHouse {
                 }
             }
 
-            Err(Error::IllegalDeviceName(device_name.to_owned()))
+            Err(DeviceError::IllegalDeviceName(device_name.to_owned()))
         } else {
-            Err(Error::IllegalRoomName(room_name.to_owned()))
+            Err(DeviceError::IllegalRoomName(room_name.to_owned()))
         }
     }
 }

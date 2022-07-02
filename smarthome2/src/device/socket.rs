@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     device::{Device, DeviceState, Event, StateEvent},
-    error::Error,
+    error::DeviceError,
 };
 
 ///
@@ -73,7 +73,7 @@ impl Device for SmartSocket {
     ///
     /// Обработать событие устройством.
     ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, Error> {
+    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
         match e.id() {
             StateEvent::ID => Ok(self.get_device_state(e.id())),
 
@@ -87,7 +87,7 @@ impl Device for SmartSocket {
                 Ok(self.get_device_state(e.id()))
             }
 
-            _ => Err(Error::NotImplementedEvent(e.id())),
+            _ => Err(DeviceError::NotImplementedEvent(e.id())),
         }
     }
 }
