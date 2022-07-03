@@ -8,6 +8,9 @@ use crate::{
     error::{ConnectionError, RequestError},
 };
 
+///
+/// Клиент подсистемы управления "умного" дома.
+///
 pub struct ControlClient {
     client: Client,
 }

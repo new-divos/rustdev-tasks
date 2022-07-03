@@ -184,13 +184,16 @@ pub struct ControlResponse {
     pub(crate) data: ControlResponseData,
 }
 
-impl iter::FromIterator<(Uuid, String)> for ControlResponse {
+impl<'a> iter::FromIterator<(Uuid, &'a str)> for ControlResponse {
     ///
     /// Сформировать ответ на запрос управления "умным" домом из
     /// итератора.
     ///
-    fn from_iter<T: IntoIterator<Item = (Uuid, String)>>(iter: T) -> Self {
-        let v: Vec<_> = iter.into_iter().collect();
+    fn from_iter<T: IntoIterator<Item = (Uuid, &'a str)>>(iter: T) -> Self {
+        let v: Vec<(Uuid, String)> = iter
+            .into_iter()
+            .map(|(id, name)| (id, name.to_owned()))
+            .collect();
 
         Self {
             version: ProtocolVersion::V1_0,
