@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 
-use bincode;
-use serde::{de, Serialize};
+use bincode::{self, Options};
+use serde::{de, Deserialize, Serialize};
 
 use crate::error::{RecvError, SendError};
 
@@ -19,6 +19,15 @@ pub trait Message {
     const TYPE: u16;
 }
 
+///
+/// Версия протокола.
+///
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ProtocolVersion {
+    #[serde(rename = "1.0")]
+    V1_0,
+}
+
 // Отправить сообщение.
 pub(crate) fn send_message<M: Message + Serialize, W: Write>(
     message: M,
@@ -27,7 +36,7 @@ pub(crate) fn send_message<M: Message + Serialize, W: Write>(
     let bytes = M::TYPE.to_be_bytes();
     writer.write_all(&bytes)?;
 
-    let data = bincode::serialize(&message)?;
+    let data = bincode::options().with_big_endian().serialize(&message)?;
     let size = data.len() as u32;
     let bytes = size.to_be_bytes();
     writer.write_all(&bytes)?;
@@ -53,7 +62,9 @@ pub(crate) fn recv_message<M: Message + de::DeserializeOwned, R: Read>(
 
     let mut data = vec![0u8; len as _];
     reader.read_exact(&mut data)?;
-    let message = bincode::deserialize(&data[..])?;
+    let message = bincode::options()
+        .with_big_endian()
+        .deserialize(&data[..])?;
 
     Ok(Box::new(message))
 }

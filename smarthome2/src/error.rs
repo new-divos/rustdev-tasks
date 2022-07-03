@@ -83,4 +83,7 @@ pub enum RequestError {
 
     #[error(transparent)]
     Recv(#[from] RecvError),
+
+    #[error("server side error {0}")]
+    Srv(String),
 }
