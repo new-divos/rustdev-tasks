@@ -7,8 +7,8 @@ use rand::{self, Rng};
 use serde::{de, Serialize};
 
 use crate::{
+    control::protocol::{consts::MASK, mask, recv_message, send_message, Message},
     error::{ConnectionError, RequestError},
-    protocol::{consts::MASK, mask, recv_message, send_message, Message},
 };
 
 ///

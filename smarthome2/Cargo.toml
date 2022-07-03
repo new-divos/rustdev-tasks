@@ -8,4 +8,4 @@ bincode = {version = "^1"}
 rand = {version = "^0.8"}
 serde = {version = "^1", features = ["derive"]}
 thiserror = {version = "^1"}
-uuid = {version = "^1", features = ["v4", "fast-rng"]}
+uuid = {version = "^1", features = ["v4", "fast-rng", "serde"]}

@@ -1,5 +1,6 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::DeviceError;
@@ -41,7 +42,7 @@ pub trait Device: fmt::Display {
 /// Структура, содержащая состояние устройства после обработки
 /// события.
 ///
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DeviceState {
     // Идентификатор устройства.
     device_id: Uuid,

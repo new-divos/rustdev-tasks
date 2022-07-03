@@ -17,11 +17,6 @@ pub trait Message {
     /// Идентификатор типа сообщения.
     ///
     const TYPE: u16;
-
-    ///
-    /// Флаги сообщения.
-    ///
-    const FLAGS: u8;
 }
 
 // Отправить сообщение.
@@ -30,8 +25,6 @@ pub(crate) fn send_message<M: Message + Serialize, W: Write>(
     mut writer: W,
 ) -> Result<(), SendError> {
     let bytes = M::TYPE.to_be_bytes();
-    writer.write_all(&bytes)?;
-    let bytes = M::FLAGS.to_be_bytes();
     writer.write_all(&bytes)?;
 
     let data = bincode::serialize(&message)?;
@@ -52,12 +45,6 @@ pub(crate) fn recv_message<M: Message + de::DeserializeOwned, R: Read>(
     let message_type = u16::from_be_bytes(bytes);
     if message_type != M::TYPE {
         return Err(RecvError::BadType(message_type));
-    }
-
-    let mut bytes = [0u8; 1];
-    reader.read_exact(&mut bytes)?;
-    if (bytes[0] & M::FLAGS) == 0 {
-        return Err(RecvError::BadFlags(bytes[0]));
     }
 
     let mut bytes = [0u8; 4];

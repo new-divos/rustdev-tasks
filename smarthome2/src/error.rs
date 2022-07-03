@@ -50,9 +50,6 @@ pub enum RecvError {
 
     #[error("bad message type {0}")]
     BadType(u16),
-
-    #[error("bad message flags {0}")]
-    BadFlags(u8),
 }
 
 ///
@@ -78,12 +75,12 @@ pub enum BindError {
 
 ///
 /// Ошибка обработки запроса.
-/// 
+///
 #[derive(Debug, Error)]
 pub enum RequestError {
     #[error(transparent)]
     Send(#[from] SendError),
-    
+
     #[error(transparent)]
     Recv(#[from] RecvError),
 }

@@ -6,8 +6,8 @@ use std::{
 use serde::{de, Serialize};
 
 use crate::{
+    control::protocol::{consts::MASK, mask, recv_message, send_message, Message},
     error::{BindError, ConnectionError, RecvError, SendError},
-    protocol::{consts::MASK, mask, recv_message, send_message, Message},
 };
 
 ///
