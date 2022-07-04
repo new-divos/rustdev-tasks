@@ -35,7 +35,7 @@ impl ControlClient {
         let response: Box<ControlResponse> = self.client.request(req)?;
 
         if let ControlResponseData::Error(message) = response.data {
-            Err(RequestError::Srv(message))
+            Err(RequestError::ServerError(message))
         } else {
             Ok(response)
         }

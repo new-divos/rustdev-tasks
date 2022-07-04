@@ -1,8 +1,9 @@
-use std::fmt;
+use std::{cell::RefCell, fmt, net::ToSocketAddrs};
 
 use uuid::Uuid;
 
 use crate::{
+    control::{client::ControlClient, message::ControlRequest},
     device::{Device, DeviceState, Event, StateEvent},
     error::DeviceError,
 };
@@ -75,19 +76,34 @@ impl Device for SmartSocket {
     ///
     fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
         match e.id() {
-            StateEvent::ID => Ok(self.get_device_state(e.id())),
+            StateEvent::ID => Ok(DeviceState::for_socket(
+                self.id,
+                e.id(),
+                self.enabled,
+                self.power(),
+            )),
 
             SwitchOnEvent::ID => {
                 self.switch_on();
-                Ok(self.get_device_state(e.id()))
+                Ok(DeviceState::for_socket(
+                    self.id,
+                    e.id(),
+                    self.enabled,
+                    self.power(),
+                ))
             }
 
             SwitchOffEvent::ID => {
                 self.switch_off();
-                Ok(self.get_device_state(e.id()))
+                Ok(DeviceState::for_socket(
+                    self.id,
+                    e.id(),
+                    self.enabled,
+                    self.power(),
+                ))
             }
 
-            _ => Err(DeviceError::NotImplementedEvent(e.id())),
+            id => Err(DeviceError::NotImplementedEvent(id)),
         }
     }
 }
@@ -96,6 +112,7 @@ impl SmartSocket {
     ///
     /// Создать "умную" розетку в выключенном состоянии.
     ///
+    #[inline]
     pub fn new(name: &str) -> Self {
         SmartSocket {
             id: Uuid::new_v4(),
@@ -108,6 +125,7 @@ impl SmartSocket {
     ///
     /// Включить "умную" розетку.
     ///
+    #[inline]
     pub fn switch_on(&mut self) {
         self.enabled = true;
     }
@@ -115,6 +133,7 @@ impl SmartSocket {
     ///
     /// Выключить "умную" розетку.
     ///
+    #[inline]
     pub fn switch_off(&mut self) {
         self.enabled = false;
     }
@@ -122,7 +141,8 @@ impl SmartSocket {
     ///
     /// Проверить, включена ли "умная" розетка.
     ///
-    pub fn is_switched_on(&self) -> bool {
+    #[inline]
+    pub fn enabled(&self) -> bool {
         self.enabled
     }
 
@@ -143,11 +163,167 @@ impl SmartSocket {
     pub fn plug(&mut self, power: f64) {
         self.power = power;
     }
+}
 
-    // Получить состояние устройства для события с заданным идентификатором класса.
-    #[inline]
-    fn get_device_state(&self, event_id: Uuid) -> DeviceState {
-        DeviceState::for_socket(self.id(), event_id, self.enabled, self.power)
+///
+/// Структура, описывающая взаимодействие с удаленной "умной" розеткой
+/// по протоколу TCP.
+///
+pub struct RemoteSmartSocket {
+    ///
+    /// Идентификатор "умной" розетки.
+    ///
+    id: Uuid,
+
+    ///
+    /// Имя "умной" розетки.
+    ///
+    name: String,
+
+    ///
+    /// Клиент для взаимодействия с удаленной умной розеткой.
+    ///
+    client: RefCell<ControlClient>,
+}
+
+impl fmt::Display for RemoteSmartSocket {
+    ///
+    /// Получить информацию об "умной" розетке с помощью форматирования.
+    ///
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Ok(response) = self
+            .client
+            .borrow_mut()
+            .request(ControlRequest::acquire_remote_device_state())
+        {
+            if let Some(state) = response.state() {
+                if state.device_id() == self.id {
+                    if let Some(enabled) = state.enabled() {
+                        let power = state.power().unwrap_or(0.0);
+
+                        let mut v = vec![format!(
+                            "умная розетка \"{}\" ({}). Состояние: ",
+                            self.name, self.id
+                        )];
+
+                        if enabled {
+                            v.push(format!("включена, потребляемая мощность {} Вт.", power));
+                        } else {
+                            v.push("выключена.".to_string());
+                        }
+
+                        return write!(f, "{}", v.join(""));
+                    }
+                }
+            }
+        }
+
+        Err(fmt::Error)
+    }
+}
+
+impl Device for RemoteSmartSocket {
+    ///
+    /// Идентификатор удаленной "умной" розетки.
+    ///
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    ///
+    /// Получить имя удаленной "умной" розетки.
+    ///
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
+        match e.id() {
+            StateEvent::ID => self.state(),
+            SwitchOnEvent::ID => self.switch_on(),
+            SwitchOffEvent::ID => self.switch_off(),
+            id => Err(DeviceError::NotImplementedEvent(id)),
+        }
+    }
+}
+
+impl RemoteSmartSocket {
+    ///
+    /// Подключиться к серверу с заданным адресом.
+    ///
+    pub fn connect<A>(addrs: A) -> Result<Self, DeviceError>
+    where
+        A: ToSocketAddrs,
+    {
+        let mut client = ControlClient::connect(addrs)?;
+
+        let response = client.request(ControlRequest::acquire_remote_device_name())?;
+        if let Some((id, name)) = response.name() {
+            Ok(Self {
+                id,
+                name: name.to_owned(),
+                client: RefCell::new(client),
+            })
+        } else {
+            Err(DeviceError::UnexpectedMessage)
+        }
+    }
+
+    ///
+    /// Включить удаленную "умную" розетку.
+    ///
+    pub fn switch_on(&mut self) -> Result<DeviceState, DeviceError> {
+        let response = self
+            .client
+            .get_mut()
+            .request(ControlRequest::switch_on_remote_device())?;
+
+        if let Some(state) = response.state() {
+            if state.device_id() == self.id {
+                return Ok(state);
+            }
+        }
+
+        Err(DeviceError::UnexpectedMessage)
+    }
+
+    ///
+    /// Выключить удаленную "умную" розетку.
+    ///
+    pub fn switch_off(&mut self) -> Result<DeviceState, DeviceError> {
+        let response = self
+            .client
+            .get_mut()
+            .request(ControlRequest::switch_off_remote_device())?;
+
+        if let Some(state) = response.state() {
+            if state.device_id() == self.id {
+                return Ok(state);
+            }
+        }
+
+        Err(DeviceError::UnexpectedMessage)
+    }
+
+    ///
+    /// Получить состояние удаленной "умной" розетки.
+    ///
+    pub fn state(&mut self) -> Result<DeviceState, DeviceError> {
+        let response = self
+            .client
+            .get_mut()
+            .request(ControlRequest::acquire_remote_device_state())?;
+
+        if let Some(state) = response.state() {
+            if state.device_id() == self.id {
+                return Ok(state);
+            }
+        }
+
+        Err(DeviceError::UnexpectedMessage)
     }
 }
 

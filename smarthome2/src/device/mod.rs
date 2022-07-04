@@ -62,17 +62,13 @@ impl DeviceState {
     /// Получить состояние устройства для розетки.
     ///
     #[inline]
-    pub fn for_socket(device_id: Uuid, event_id: Uuid, enabled: bool, power: f64) -> Self {
+    pub fn for_socket(device_id: Uuid, event_id: Uuid, enabled: bool, power: Option<f64>) -> Self {
         Self {
             device_id,
             event_id,
             themperature: None,
             enabled: Some(enabled),
-            power: if enabled && power >= 0.0 {
-                Some(power)
-            } else {
-                None
-            },
+            power,
         }
     }
 

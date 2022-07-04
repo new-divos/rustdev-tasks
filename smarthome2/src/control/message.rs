@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    control::protocol::{Message, ProtocolVersion},
+    control::protocol::{
+        consts::{CONTROL_REQUEST_ID, CONTROL_RESPONSE_ID, TEXT_MESSAGE_ID},
+        Message, ProtocolVersion,
+    },
     device::DeviceState,
 };
 
@@ -29,7 +32,7 @@ impl Message for TextMessage {
     ///
     /// Идентификатор типа сообщения.
     ///
-    const TYPE: u16 = 0xFFFF;
+    const TYPE: u16 = TEXT_MESSAGE_ID;
 }
 
 impl TextMessage {
@@ -57,14 +60,26 @@ pub(crate) enum ControlRequestData {
     // Запрос на получение состояния устройства.
     AcquireDeviceState(Uuid, Uuid),
 
+    // Запрос на получение состояния удаленного устройства.
+    AcquireRemoteDeviceState,
+
     // Запрос на получение информации об устройства.
     AcquireDeviceInfo(Uuid, Uuid),
+
+    // Запрос на получение идентификатора и имени удаленного устройства.
+    AcquireRemoteDeviceName,
 
     // Запрос на включение устройства.
     SwitchOnDevice(Uuid, Uuid),
 
+    // Запрос на включение удаоенного устройства.
+    SwitchOnRemoteDevice,
+
     // Запрос на выключение устройства.
     SwitchOffDevice(Uuid, Uuid),
+
+    // Запрос на выключение удаленного устройства.
+    SwitchOffRemoteDevice,
 }
 
 ///
@@ -76,7 +91,6 @@ pub struct ControlRequest {
     version: ProtocolVersion,
 
     // Данные запроса.
-    #[serde(flatten)]
     pub(crate) data: ControlRequestData,
 }
 
@@ -84,7 +98,7 @@ impl Message for ControlRequest {
     ///
     /// Идентификатор типа сообщения.
     ///
-    const TYPE: u16 = 0x1;
+    const TYPE: u16 = CONTROL_REQUEST_ID;
 }
 
 impl ControlRequest {
@@ -122,6 +136,17 @@ impl ControlRequest {
     }
 
     ///
+    /// Создать запрос для получения состояния удаленного устройства.
+    ///
+    #[inline]
+    pub fn acquire_remote_device_state() -> Self {
+        Self {
+            version: ProtocolVersion::V1_0,
+            data: ControlRequestData::AcquireRemoteDeviceState,
+        }
+    }
+
+    ///
     /// Создать запрос для получения информации об устройстве.
     ///
     #[inline]
@@ -133,8 +158,20 @@ impl ControlRequest {
     }
 
     ///
+    /// Создать запрос на получение идентификатора и имени удаленного устройства.
+    ///
+    #[inline]
+    pub fn acquire_remote_device_name() -> Self {
+        Self {
+            version: ProtocolVersion::V1_0,
+            data: ControlRequestData::AcquireRemoteDeviceName,
+        }
+    }
+
+    ///
     /// Создать запрос для включения устройства.
     ///
+    #[inline]
     pub fn switch_on_device(room_id: Uuid, device_id: Uuid) -> Self {
         Self {
             version: ProtocolVersion::V1_0,
@@ -143,12 +180,35 @@ impl ControlRequest {
     }
 
     ///
+    /// Создать запрос для включения удаленного устройства.
+    ///
+    #[inline]
+    pub fn switch_on_remote_device() -> Self {
+        Self {
+            version: ProtocolVersion::V1_0,
+            data: ControlRequestData::SwitchOnRemoteDevice,
+        }
+    }
+
+    ///
     /// Создать запрос для выключения устройства.
     ///
+    #[inline]
     pub fn switch_off_device(room_id: Uuid, device_id: Uuid) -> Self {
         Self {
             version: ProtocolVersion::V1_0,
             data: ControlRequestData::SwitchOffDevice(room_id, device_id),
+        }
+    }
+
+    ///
+    /// Создать запрос для выключения удаленного устройства.
+    ///
+    #[inline]
+    pub fn switch_off_remote_device() -> Self {
+        Self {
+            version: ProtocolVersion::V1_0,
+            data: ControlRequestData::SwitchOffRemoteDevice,
         }
     }
 }
@@ -167,6 +227,9 @@ pub(crate) enum ControlResponseData {
     // Информация об устройстве в текстовом виде.
     Info(String),
 
+    // Идентификатор и имя устройства.
+    Name(Uuid, String),
+
     // Текстовая информация об ошибке.
     Error(String),
 }
@@ -180,7 +243,6 @@ pub struct ControlResponse {
     version: ProtocolVersion,
 
     // Данные ответа на запрос.
-    #[serde(flatten)]
     pub(crate) data: ControlResponseData,
 }
 
@@ -206,7 +268,7 @@ impl Message for ControlResponse {
     ///
     /// Идентификатор типа сообщения.
     ///
-    const TYPE: u16 = 0x2;
+    const TYPE: u16 = CONTROL_RESPONSE_ID;
 }
 
 impl ControlResponse {
@@ -229,6 +291,17 @@ impl ControlResponse {
         Self {
             version: ProtocolVersion::V1_0,
             data: ControlResponseData::Info(info.as_ref().to_owned()),
+        }
+    }
+
+    ///
+    /// Создать ответ с идентификатором и именем устройства.
+    ///
+    #[inline]
+    pub fn with_name<D: AsRef<str>>(id: Uuid, name: D) -> Self {
+        Self {
+            version: ProtocolVersion::V1_0,
+            data: ControlResponseData::Name(id, name.as_ref().to_owned()),
         }
     }
 
@@ -260,6 +333,17 @@ impl ControlResponse {
     pub fn info(&self) -> Option<&str> {
         if let ControlResponseData::Info(ref info) = self.data {
             Some(info.as_str())
+        } else {
+            None
+        }
+    }
+
+    ///
+    /// Получить идентификатор и имя устройства.
+    ///
+    pub fn name(&self) -> Option<(Uuid, &str)> {
+        if let ControlResponseData::Name(id, ref name) = self.data {
+            Some((id, name.as_str()))
         } else {
             None
         }

@@ -22,7 +22,7 @@ pub struct SmartRoom {
     ///
     /// Список устройств комнаты "умного" дома.
     ///
-    pub(crate) devices: LinkedList<Box<dyn Device>>,
+    pub(crate) devices: LinkedList<Box<dyn Device + Send + Sync>>,
 }
 
 impl fmt::Display for SmartRoom {
@@ -43,7 +43,7 @@ impl fmt::Display for SmartRoom {
     }
 }
 
-impl<T: 'static + Device> ops::AddAssign<T> for SmartRoom {
+impl<T: 'static + Device + Send + Sync> ops::AddAssign<T> for SmartRoom {
     ///
     /// Добавить устройство для комнаты "умного" дома.
     ///
@@ -59,7 +59,7 @@ impl ops::SubAssign<Uuid> for SmartRoom {
     /// Удалить устройство с заданным идентификатором.
     ///
     fn sub_assign(&mut self, device_id: Uuid) {
-        let mut devices: LinkedList<Box<dyn Device>> = LinkedList::new();
+        let mut devices: LinkedList<Box<dyn Device + Send + Sync>> = LinkedList::new();
         while let Some(device_ref) = self.devices.pop_back() {
             if device_ref.id() != device_id {
                 devices.push_front(device_ref);
@@ -75,7 +75,7 @@ impl ops::SubAssign<&str> for SmartRoom {
     /// Удалить устройство с заданным именем.
     ///
     fn sub_assign(&mut self, device_name: &str) {
-        let mut devices: LinkedList<Box<dyn Device>> = LinkedList::new();
+        let mut devices: LinkedList<Box<dyn Device + Send + Sync>> = LinkedList::new();
         while let Some(device_ref) = self.devices.pop_back() {
             if device_ref.name() != device_name {
                 devices.push_front(device_ref);

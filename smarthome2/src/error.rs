@@ -23,6 +23,15 @@ pub enum DeviceError {
 
     #[error("the event {0} is not implemented")]
     NotImplementedEvent(Uuid),
+
+    #[error("unexpected message")]
+    UnexpectedMessage,
+
+    #[error(transparent)]
+    ConnectionError(#[from] ConnectionError),
+
+    #[error(transparent)]
+    RequestError(#[from] RequestError),
 }
 
 ///
@@ -85,5 +94,5 @@ pub enum RequestError {
     Recv(#[from] RecvError),
 
     #[error("server side error {0}")]
-    Srv(String),
+    ServerError(String),
 }
