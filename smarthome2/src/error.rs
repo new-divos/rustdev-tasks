@@ -32,6 +32,12 @@ pub enum DeviceError {
 
     #[error(transparent)]
     RequestError(#[from] RequestError),
+
+    #[error("IO error: {0}")]
+    IoError(#[from] io::Error),
+
+    #[error("binary error: {0}")]
+    Bin(#[from] bincode::Error),
 }
 
 ///

@@ -5,7 +5,9 @@ use uuid::Uuid;
 
 use crate::{
     control::protocol::{
-        consts::{CONTROL_REQUEST_ID, CONTROL_RESPONSE_ID, TEXT_MESSAGE_ID},
+        consts::{
+            CONTROL_REQUEST_ID, CONTROL_RESPONSE_ID, TEXT_MESSAGE_ID, THERMOMETER_MESSAGE_ID,
+        },
         Message, ProtocolVersion,
     },
     device::DeviceState,
@@ -347,5 +349,55 @@ impl ControlResponse {
         } else {
             None
         }
+    }
+}
+
+///
+/// Сообщение с данными автономного термометра.
+///
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ThermometerMessage {
+    ///
+    /// Значение температуры автономного термометра.
+    ///
+    themperature: f64,
+
+    ///
+    /// Идентификатор автономного термометра.
+    ///
+    id: Uuid,
+}
+
+impl Message for ThermometerMessage {
+    ///
+    /// Идентификатор типа сообщения.
+    ///
+    const TYPE: u16 = THERMOMETER_MESSAGE_ID;
+}
+
+impl ThermometerMessage {
+    ///
+    /// Создать сообщение с заданными идентификатором автономного
+    /// термометра и значением температуры.
+    /// 
+    #[inline]
+    pub fn new(id: Uuid, themperature: f64) -> Self {
+        Self { themperature, id }
+    }
+
+    ///
+    /// Получить значение температуры.
+    ///
+    #[inline]
+    pub fn themperature(&self) -> f64 {
+        self.themperature
+    }
+
+    ///
+    /// Получить идентификатор автономного термометра.
+    /// 
+    #[inline]
+    pub fn id(&self) -> Uuid {
+        self.id
     }
 }
