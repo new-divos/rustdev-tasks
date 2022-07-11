@@ -162,23 +162,23 @@ impl AutonomousThermometer {
                 let duration = time::Duration::from_secs(3);
 
                 let mut rng = thread_rng();
-                let normal = Normal::new(1.0, 1.0).unwrap();
+                let normal = Normal::new(0.0, 1.0).unwrap();
 
                 while (*working).load(Ordering::Relaxed) {
-                    let (mut themperature, id) = {
+                    let (mut temperature, id) = {
                         let guard = thermometer.read().unwrap();
                         (guard.temperature(), guard.id())
                     };
                     if noisy {
-                        themperature += rng.sample(normal);
+                        temperature += rng.sample(normal);
                     }
 
-                    let message = ThermometerMessage::new(id, themperature);
+                    let message = ThermometerMessage::new(id, temperature);
                     let bytes = bincode::options().with_big_endian().serialize(&message)?;
 
                     log::info!(
-                        "Sending themperature {} °C of the device {} ...",
-                        themperature,
+                        "Sending temperature {} °C of the device {} ...",
+                        temperature,
                         id
                     );
                     socket.send(&bytes[..])?;
@@ -290,6 +290,252 @@ impl AutonomousThermometerBuilder<&str, &str> {
             addr: "127.0.0.1:8000",
             remote_addr: "127.0.0.1:8888",
             noisy: false,
+        }
+    }
+}
+
+///
+/// Структура, описывающая взаимодействие с удаленным "умным" термометром.
+///
+#[derive(Debug)]
+pub struct RemoteThermometer {
+    ///
+    /// Имя удаленного "умного" термометра.
+    ///
+    name: String,
+
+    ///
+    /// Данные удаленного "умного" термометра.
+    ///
+    data: Arc<RwLock<(Uuid, f64)>>,
+
+    ///
+    /// Флаг для завершения связанного с удаленным "умным" термометром потока.
+    ///
+    control: Weak<AtomicBool>,
+}
+
+impl Drop for RemoteThermometer {
+    ///
+    /// Выполнить остановку потока при удалении экземпляра удаленного
+    /// "умного" термометра.
+    ///
+    fn drop(&mut self) {
+        if let Some(w) = self.control.upgrade() {
+            (*w).store(false, Ordering::Relaxed);
+        }
+    }
+}
+
+impl fmt::Display for RemoteThermometer {
+    ///
+    /// Получить информацию об удаленном "умном" термометре с помощью форматирования.
+    ///
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (id, temperature) = {
+            let guard = self.data.read().unwrap();
+            *guard
+        };
+
+        write!(
+            f,
+            "умный термометр \"{}\" ({}). Температура: {} °C.",
+            self.name, id, temperature
+        )
+    }
+}
+
+impl Device for RemoteThermometer {
+    ///
+    /// Получить идентификатор удаленного "умного" термометра.
+    ///
+    fn id(&self) -> Uuid {
+        let guard = self.data.read().unwrap();
+        let (id, _) = *guard;
+
+        id
+    }
+
+    ///
+    /// Получить имя удаленного "умного" термометра.
+    ///
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
+        if e.id() == StateEvent::ID {
+            let (id, temperature) = {
+                let guard = self.data.read().unwrap();
+                *guard
+            };
+
+            Ok(DeviceState::for_thermometer(id, e.id(), temperature))
+        } else {
+            Err(DeviceError::NotImplementedEvent(e.id()))
+        }
+    }
+}
+
+impl RemoteThermometer {
+    ///
+    /// Создать объект по умолчанию для построения экземпляра удаленного
+    /// "умного" термометра.
+    ///
+    #[inline]
+    pub fn builder() -> RemoteThermometerBuilder<&'static str, &'static str> {
+        RemoteThermometerBuilder::<&str, &str>::default()
+    }
+
+    ///
+    /// Получить текущее значение температуры удаленного "умного" термометра.
+    ///
+    pub fn temperature(&self) -> Result<f64, DeviceError> {
+        let guard = self.data.read().unwrap();
+        let (_, temperature) = *guard;
+
+        Ok(temperature)
+    }
+}
+
+///
+/// Структура для построения экзкмпляра удаленного "умного" термометра.
+///
+pub struct RemoteThermometerBuilder<BA, RA>
+where
+    BA: 'static + ToSocketAddrs + Send,
+    RA: 'static + ToSocketAddrs + Send,
+{
+    ///
+    /// Имя удаленного "умного" термометра.
+    ///
+    name: String,
+
+    ///
+    /// Адес привязки UDP-сокета.
+    ///
+    addr: BA,
+
+    ///
+    /// Адрес подключения автономного термометра.
+    ///
+    remote_addr: RA,
+}
+
+impl<BA: ToSocketAddrs + Send, RA: ToSocketAddrs + Send> RemoteThermometerBuilder<BA, RA> {
+    ///
+    /// Использовать имя удаленного "умного" термометра.
+    ///
+    #[inline]
+    pub fn with_name<D: AsRef<str>>(self, name: D) -> Self {
+        Self {
+            name: name.as_ref().to_string(),
+            addr: self.addr,
+            remote_addr: self.remote_addr,
+        }
+    }
+
+    ///
+    /// Установить адрес привязки сокета удаленного "умного" термометра.
+    ///
+    #[inline]
+    pub fn bind<BA2: 'static + ToSocketAddrs + Send>(
+        self,
+        addr: BA2,
+    ) -> RemoteThermometerBuilder<BA2, RA> {
+        RemoteThermometerBuilder::<BA2, RA> {
+            name: self.name,
+            addr,
+            remote_addr: self.remote_addr,
+        }
+    }
+
+    ///
+    /// Установить адрес автономного "умного" термометра.
+    ///
+    #[inline]
+    pub fn connect<RA2: 'static + ToSocketAddrs + Send>(
+        self,
+        addr: RA2,
+    ) -> RemoteThermometerBuilder<BA, RA2> {
+        RemoteThermometerBuilder::<BA, RA2> {
+            name: self.name,
+            addr: self.addr,
+            remote_addr: addr,
+        }
+    }
+
+    ///
+    /// Выполнить построение экзкмпляра удаленного "умного" термометра.
+    ///
+    pub fn build(self) -> RemoteThermometer {
+        let addr = self.addr;
+        let remote_addr = self.remote_addr;
+        let duration = time::Duration::from_millis(50);
+
+        let working = Arc::new(AtomicBool::new(true));
+        let control = Arc::downgrade(&working);
+
+        let data = Arc::new(RwLock::new((Uuid::nil(), 0.0)));
+        let cloned = data.clone();
+
+        thread::spawn(move || -> Result<(), DeviceError> {
+            let socket = UdpSocket::bind(addr)?;
+            socket.connect(remote_addr)?;
+
+            let mut buf = [0u8; 512];
+            while (*working).load(Ordering::Relaxed) {
+                if let Ok(received) = socket.recv(&mut buf) {
+                    if let Ok(message) = bincode::options()
+                        .with_big_endian()
+                        .deserialize::<ThermometerMessage>(&buf[..received])
+                    {
+                        let mut guard = cloned.write().unwrap();
+                        *guard = (message.id(), message.temperature());
+                    } else {
+                        log::error!("Message deserialization error");
+                    }
+                }
+
+                thread::sleep(duration);
+            }
+
+            Ok(())
+        });
+
+        RemoteThermometer {
+            name: self.name,
+            data,
+            control,
+        }
+    }
+}
+
+impl Default for RemoteThermometerBuilder<&str, &str> {
+    ///
+    /// Создать экземпляр по умолчанию построителя удаленного
+    /// "умного" термометра.
+    ///
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RemoteThermometerBuilder<&str, &str> {
+    ///
+    /// Создать экземпляр с настройками по умолчанию построителя
+    /// удаленного "умного" термометра.
+    ///
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            name: "Untitled".to_owned(),
+            addr: "127.0.0.1:8888",
+            remote_addr: "127.0.0.1:8000",
         }
     }
 }

@@ -360,7 +360,7 @@ pub struct ThermometerMessage {
     ///
     /// Значение температуры автономного термометра.
     ///
-    themperature: f64,
+    temperature: f64,
 
     ///
     /// Идентификатор автономного термометра.
@@ -379,23 +379,23 @@ impl ThermometerMessage {
     ///
     /// Создать сообщение с заданными идентификатором автономного
     /// термометра и значением температуры.
-    /// 
+    ///
     #[inline]
-    pub fn new(id: Uuid, themperature: f64) -> Self {
-        Self { themperature, id }
+    pub fn new(id: Uuid, temperature: f64) -> Self {
+        Self { temperature, id }
     }
 
     ///
     /// Получить значение температуры.
     ///
     #[inline]
-    pub fn themperature(&self) -> f64 {
-        self.themperature
+    pub fn temperature(&self) -> f64 {
+        self.temperature
     }
 
     ///
     /// Получить идентификатор автономного термометра.
-    /// 
+    ///
     #[inline]
     pub fn id(&self) -> Uuid {
         self.id
