@@ -12,7 +12,7 @@ pub mod thermometer;
 ///
 /// Типаж, описывающий событие.
 ///
-pub trait Event {
+pub trait Event: Send + Sync + 'static {
     ///
     /// Получить идентификатор класса события.
     ///
@@ -23,30 +23,7 @@ pub trait Event {
 /// Типаж, описывающий асинхронное устройство.
 ///
 #[async_trait]
-pub trait AsyncDevice: fmt::Display {
-    ///
-    /// Получить идентификатор устройства.
-    ///
-    async fn id(&self) -> Uuid;
-
-    ///
-    /// Получить имя устройства.
-    ///
-    async fn name(&self) -> &str;
-
-    ///
-    /// Обработать событие устройством.
-    ///
-    async fn async_notify(
-        &mut self,
-        e: Pin<Box<dyn Event + Send + Sync>>,
-    ) -> Result<DeviceState, DeviceError>;
-}
-
-///
-/// Типаж, описывающий устройство.
-///
-pub trait Device: fmt::Display {
+pub trait AsyncDevice: fmt::Display + Send + Sync + 'static {
     ///
     /// Получить идентификатор устройства.
     ///
@@ -60,7 +37,7 @@ pub trait Device: fmt::Display {
     ///
     /// Обработать событие устройством.
     ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError>;
+    async fn async_notify(&mut self, e: Pin<Box<dyn Event>>) -> Result<DeviceState, DeviceError>;
 }
 
 ///

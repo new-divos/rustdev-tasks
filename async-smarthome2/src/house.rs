@@ -1,6 +1,6 @@
-use std::collections::LinkedList;
-use std::{fmt, iter, ops};
+use std::{collections::LinkedList, fmt, iter, ops, pin::Pin};
 
+use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::device::{DeviceState, Event};
@@ -37,11 +37,17 @@ pub trait DeviceInfo<U, V> {
 ///
 /// Типаж, описывающий обработку события некоторым устройством.
 ///
+#[async_trait]
 pub trait DeviceNotifier<U, V> {
     ///
     /// Обработать событие заданным устройством.
     ///
-    fn notify(&mut self, idx1: U, idx2: V, e: &dyn Event) -> Result<DeviceState, DeviceError>;
+    async fn async_notify(
+        &mut self,
+        idx1: U,
+        idx2: V,
+        e: Pin<Box<dyn Event>>,
+    ) -> Result<DeviceState, DeviceError>;
 }
 
 ///
@@ -262,21 +268,22 @@ impl DeviceInfo<&str, &str> for SmartHouse {
     }
 }
 
+#[async_trait]
 impl DeviceNotifier<Uuid, Uuid> for SmartHouse {
     ///
     /// Обработать событие заданным устройством по идентификатору комнаты
     /// и идентификатору устройства.
     ///
-    fn notify(
+    async fn async_notify(
         &mut self,
         room_id: Uuid,
         device_id: Uuid,
-        e: &dyn Event,
+        e: Pin<Box<dyn Event>>,
     ) -> Result<DeviceState, DeviceError> {
         if let Some(room) = self.get_mut(room_id) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.id() == device_id {
-                    return device_ref.notify(e);
+                    return device_ref.async_notify(e).await;
                 }
             }
 
@@ -287,21 +294,22 @@ impl DeviceNotifier<Uuid, Uuid> for SmartHouse {
     }
 }
 
-impl DeviceNotifier<Uuid, &str> for SmartHouse {
+#[async_trait]
+impl DeviceNotifier<Uuid, String> for SmartHouse {
     ///
     /// Обработать событие заданным устройством по идентификатору комнаты
     /// и имени устройства.
     ///
-    fn notify(
+    async fn async_notify(
         &mut self,
         room_id: Uuid,
-        device_name: &str,
-        e: &dyn Event,
+        device_name: String,
+        e: Pin<Box<dyn Event>>,
     ) -> Result<DeviceState, DeviceError> {
         if let Some(room) = self.get_mut(room_id) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.name() == device_name {
-                    return device_ref.notify(e);
+                    return device_ref.async_notify(e).await;
                 }
             }
 
@@ -312,21 +320,22 @@ impl DeviceNotifier<Uuid, &str> for SmartHouse {
     }
 }
 
-impl DeviceNotifier<&str, Uuid> for SmartHouse {
+#[async_trait]
+impl DeviceNotifier<String, Uuid> for SmartHouse {
     ///
     /// Обработать событие заданным устройством по имени комнаты
     /// и идентификатору устройства.
     ///
-    fn notify(
+    async fn async_notify(
         &mut self,
-        room_name: &str,
+        room_name: String,
         device_id: Uuid,
-        e: &dyn Event,
+        e: Pin<Box<dyn Event>>,
     ) -> Result<DeviceState, DeviceError> {
-        if let Some(room) = self.get_mut(room_name) {
+        if let Some(room) = self.get_mut(room_name.as_str()) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.id() == device_id {
-                    return device_ref.notify(e);
+                    return device_ref.async_notify(e).await;
                 }
             }
 
@@ -337,21 +346,22 @@ impl DeviceNotifier<&str, Uuid> for SmartHouse {
     }
 }
 
-impl DeviceNotifier<&str, &str> for SmartHouse {
+#[async_trait]
+impl DeviceNotifier<String, String> for SmartHouse {
     ///
     /// Обработать событие заданным устройством по имени комнаты
     /// и имени устройства.
     ///
-    fn notify(
+    async fn async_notify(
         &mut self,
-        room_name: &str,
-        device_name: &str,
-        e: &dyn Event,
+        room_name: String,
+        device_name: String,
+        e: Pin<Box<dyn Event>>,
     ) -> Result<DeviceState, DeviceError> {
-        if let Some(room) = self.get_mut(room_name) {
+        if let Some(room) = self.get_mut(room_name.as_str()) {
             for device_ref in room.devices.iter_mut() {
                 if device_ref.name() == device_name {
-                    return device_ref.notify(e);
+                    return device_ref.async_notify(e).await;
                 }
             }
 
@@ -407,20 +417,6 @@ impl SmartHouse {
     ///
     pub fn iter_mut(&mut self) -> impl iter::Iterator<Item = &mut SmartRoom> {
         self.rooms.iter_mut()
-    }
-
-    ///
-    /// Обработать событие всеми устройствами "умного" дома.
-    ///
-    pub fn notify_all<'a>(
-        &'a mut self,
-        e: &'a dyn Event,
-    ) -> impl iter::Iterator<Item = DeviceState> + 'a {
-        self.rooms
-            .iter_mut()
-            .flat_map(|it| it.devices.iter_mut())
-            .map(|device_ref| device_ref.notify(e))
-            .filter_map(|r| r.ok())
     }
 }
 

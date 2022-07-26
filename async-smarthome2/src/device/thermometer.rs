@@ -22,7 +22,7 @@ use uuid::Uuid;
 
 use crate::{
     control::message::ThermometerMessage,
-    device::{AsyncDevice, Device, DeviceState, Event, StateEvent},
+    device::{AsyncDevice, DeviceState, Event, StateEvent},
     error::DeviceError,
 };
 
@@ -66,41 +66,6 @@ impl AsyncDevice for SmartThermometer {
     /// Получить идентификатор "умного" термометра.
     ///
     #[inline]
-    async fn id(&self) -> Uuid {
-        self.id
-    }
-
-    ///
-    /// Получить имя "умного" термометра.
-    ///
-    #[inline]
-    async fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    ///
-    /// Обработать событие устройством.
-    ///
-    async fn async_notify(
-        &mut self,
-        e: Pin<Box<dyn Event + Send + Sync>>,
-    ) -> Result<DeviceState, DeviceError> {
-        if e.id() == StateEvent::ID {
-            Ok(DeviceState::for_thermometer(
-                self.id,
-                e.id(),
-                self.temperature,
-            ))
-        } else {
-            Err(DeviceError::NotImplementedEvent(e.id()))
-        }
-    }
-}
-
-impl Device for SmartThermometer {
-    ///
-    /// Получить идентификатор "умного" термометра.
-    ///
     fn id(&self) -> Uuid {
         self.id
     }
@@ -108,6 +73,7 @@ impl Device for SmartThermometer {
     ///
     /// Получить имя "умного" термометра.
     ///
+    #[inline]
     fn name(&self) -> &str {
         self.name.as_str()
     }
@@ -115,7 +81,7 @@ impl Device for SmartThermometer {
     ///
     /// Обработать событие устройством.
     ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
+    async fn async_notify(&mut self, e: Pin<Box<dyn Event>>) -> Result<DeviceState, DeviceError> {
         if e.id() == StateEvent::ID {
             Ok(DeviceState::for_thermometer(
                 self.id,
@@ -379,52 +345,15 @@ impl AsyncDevice for RemoteThermometer {
     ///
     /// Получить идентификатор удаленного "умного" термометра.
     ///
-    async fn id(&self) -> Uuid {
-        let guard = self.data.read().await;
-        guard.0
-    }
-
-    ///
-    /// Получить имя удаленного "умного" термометра.
-    ///
-    async fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    ///
-    /// Обработать событие устройством.
-    ///
-    async fn async_notify(
-        &mut self,
-        e: Pin<Box<dyn Event + Send + Sync>>,
-    ) -> Result<DeviceState, DeviceError> {
-        if e.id() == StateEvent::ID {
-            let (id, temperature) = {
-                let guard = self.data.read().await;
-                *guard
-            };
-
-            Ok(DeviceState::for_thermometer(id, e.id(), temperature))
-        } else {
-            Err(DeviceError::NotImplementedEvent(e.id()))
-        }
-    }
-}
-
-impl Device for RemoteThermometer {
-    ///
-    /// Получить идентификатор удаленного "умного" термометра.
-    ///
+    #[inline]
     fn id(&self) -> Uuid {
-        let guard = block_on(self.data.read());
-        let (id, _) = *guard;
-
-        id
+        block_on(self.get_id())
     }
 
     ///
     /// Получить имя удаленного "умного" термометра.
     ///
+    #[inline]
     fn name(&self) -> &str {
         self.name.as_str()
     }
@@ -432,10 +361,10 @@ impl Device for RemoteThermometer {
     ///
     /// Обработать событие устройством.
     ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
+    async fn async_notify(&mut self, e: Pin<Box<dyn Event>>) -> Result<DeviceState, DeviceError> {
         if e.id() == StateEvent::ID {
             let (id, temperature) = {
-                let guard = block_on(self.data.read());
+                let guard = self.data.read().await;
                 *guard
             };
 
@@ -454,6 +383,14 @@ impl RemoteThermometer {
     #[inline]
     pub fn builder() -> RemoteThermometerBuilder<&'static str, &'static str> {
         RemoteThermometerBuilder::<&str, &str>::default()
+    }
+
+    ///
+    /// Получить идентификатор удаленного "умного" термометра.
+    ///
+    async fn get_id(&self) -> Uuid {
+        let guard = self.data.read().await;
+        guard.0
     }
 }
 

@@ -4,7 +4,8 @@ use async_smarthome2::{
     room::SmartRoom,
 };
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut sweet_home = SmartHouse::new("Милый дом");
 
     let mut bathroom = SmartRoom::new("Ванная");

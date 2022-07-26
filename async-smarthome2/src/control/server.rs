@@ -1,10 +1,10 @@
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex, Weak,
+    Arc, Weak,
 };
 
 use log;
-use tokio::net::ToSocketAddrs;
+use tokio::{net::ToSocketAddrs, sync::Mutex};
 
 use crate::{
     control::{
@@ -13,7 +13,7 @@ use crate::{
     },
     device::{
         socket::{SmartSocket, SwitchOffEvent, SwitchOnEvent},
-        Device, StateEvent,
+        AsyncDevice, StateEvent,
     },
     error::{BindError, DeviceError},
 };
@@ -109,37 +109,37 @@ impl SmartSocketServer {
     async fn dispatch(socket: Arc<Mutex<SmartSocket>>, req: &ControlRequest) -> ControlResponse {
         match req.data {
             ControlRequestData::AcquireRemoteDeviceState => {
-                let mut lock = socket.lock().unwrap();
+                let mut lock = socket.lock().await;
                 log::info!("Requesting device {} state", lock.id());
 
-                match lock.notify(&StateEvent::new()) {
+                match lock.async_notify(Box::pin(StateEvent::new())).await {
                     Ok(s) => ControlResponse::with_state(s),
                     Err(e) => ControlResponse::with_error(e),
                 }
             }
 
             ControlRequestData::AcquireRemoteDeviceName => {
-                let lock = socket.lock().unwrap();
+                let lock = socket.lock().await;
                 log::info!("Obtaining device {} name \"{}\"", lock.id(), lock.name());
 
                 ControlResponse::with_name(lock.id(), lock.name())
             }
 
             ControlRequestData::SwitchOnRemoteDevice => {
-                let mut lock = socket.lock().unwrap();
+                let mut lock = socket.lock().await;
                 log::info!("Switching on device {}", lock.id());
 
-                match lock.notify(&SwitchOnEvent::new()) {
+                match lock.async_notify(Box::pin(SwitchOnEvent::new())).await {
                     Ok(s) => ControlResponse::with_state(s),
                     Err(e) => ControlResponse::with_error(e),
                 }
             }
 
             ControlRequestData::SwitchOffRemoteDevice => {
-                let mut lock = socket.lock().unwrap();
+                let mut lock = socket.lock().await;
                 log::info!("Switching off device {}", lock.id());
 
-                match lock.notify(&SwitchOffEvent::new()) {
+                match lock.async_notify(Box::pin(SwitchOffEvent::new())).await {
                     Ok(s) => ControlResponse::with_state(s),
                     Err(e) => ControlResponse::with_error(e),
                 }

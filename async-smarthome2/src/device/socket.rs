@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     control::{client::ControlClient, message::ControlRequest},
-    device::{AsyncDevice, Device, DeviceState, Event, StateEvent},
+    device::{AsyncDevice, DeviceState, Event, StateEvent},
     error::DeviceError,
 };
 
@@ -64,61 +64,7 @@ impl AsyncDevice for SmartSocket {
     ///
     /// Получить идентификатор "умной" розетки.
     ///
-    async fn id(&self) -> Uuid {
-        self.id
-    }
-
-    ///
-    /// Получить имя "умной" розетки.
-    ///
-    async fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    ///
-    /// Обработать событие устройством.
-    ///
-    async fn async_notify(
-        &mut self,
-        e: Pin<Box<dyn Event + Send + Sync>>,
-    ) -> Result<DeviceState, DeviceError> {
-        match e.id() {
-            StateEvent::ID => Ok(DeviceState::for_socket(
-                self.id,
-                e.id(),
-                self.enabled,
-                self.power(),
-            )),
-
-            SwitchOnEvent::ID => {
-                self.switch_on();
-                Ok(DeviceState::for_socket(
-                    self.id,
-                    e.id(),
-                    self.enabled,
-                    self.power(),
-                ))
-            }
-
-            SwitchOffEvent::ID => {
-                self.switch_off();
-                Ok(DeviceState::for_socket(
-                    self.id,
-                    e.id(),
-                    self.enabled,
-                    self.power(),
-                ))
-            }
-
-            id => Err(DeviceError::NotImplementedEvent(id)),
-        }
-    }
-}
-
-impl Device for SmartSocket {
-    ///
-    /// Получить идентификатор "умной" розетки.
-    ///
+    #[inline]
     fn id(&self) -> Uuid {
         self.id
     }
@@ -126,6 +72,7 @@ impl Device for SmartSocket {
     ///
     /// Получить имя "умной" розетки.
     ///
+    #[inline]
     fn name(&self) -> &str {
         self.name.as_str()
     }
@@ -133,7 +80,7 @@ impl Device for SmartSocket {
     ///
     /// Обработать событие устройством.
     ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
+    async fn async_notify(&mut self, e: Pin<Box<dyn Event>>) -> Result<DeviceState, DeviceError> {
         match e.id() {
             StateEvent::ID => Ok(DeviceState::for_socket(
                 self.id,
@@ -285,24 +232,23 @@ impl AsyncDevice for RemoteSmartSocket {
     ///
     /// Идентификатор удаленной "умной" розетки.
     ///
-    async fn id(&self) -> Uuid {
+    #[inline]
+    fn id(&self) -> Uuid {
         self.id
     }
 
     ///
     /// Получить имя удаленной "умной" розетки.
     ///
-    async fn name(&self) -> &str {
+    #[inline]
+    fn name(&self) -> &str {
         self.name.as_str()
     }
 
     ///
     /// Обработать событие устройством.
     ///
-    async fn async_notify(
-        &mut self,
-        e: Pin<Box<dyn Event + Send + Sync>>,
-    ) -> Result<DeviceState, DeviceError> {
+    async fn async_notify(&mut self, e: Pin<Box<dyn Event>>) -> Result<DeviceState, DeviceError> {
         let response = match e.id() {
             SwitchOnEvent::ID => {
                 self.client
@@ -321,56 +267,6 @@ impl AsyncDevice for RemoteSmartSocket {
                     .request(ControlRequest::acquire_remote_device_state())
                     .await?
             }
-
-            id => {
-                return Err(DeviceError::NotImplementedEvent(id));
-            }
-        };
-
-        if let Some(state) = response.state() {
-            if state.device_id() == self.id {
-                return Ok(state);
-            }
-        }
-
-        Err(DeviceError::UnexpectedMessage)
-    }
-}
-
-impl Device for RemoteSmartSocket {
-    ///
-    /// Идентификатор удаленной "умной" розетки.
-    ///
-    fn id(&self) -> Uuid {
-        self.id
-    }
-
-    ///
-    /// Получить имя удаленной "умной" розетки.
-    ///
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    ///
-    /// Обработать событие устройством.
-    ///
-    fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
-        let response = match e.id() {
-            StateEvent::ID => block_on(
-                self.client
-                    .request(ControlRequest::switch_on_remote_device()),
-            )?,
-
-            SwitchOnEvent::ID => block_on(
-                self.client
-                    .request(ControlRequest::switch_off_remote_device()),
-            )?,
-
-            SwitchOffEvent::ID => block_on(
-                self.client
-                    .request(ControlRequest::acquire_remote_device_state()),
-            )?,
 
             id => {
                 return Err(DeviceError::NotImplementedEvent(id));

@@ -1,14 +1,12 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-
 use uuid::Uuid;
 
 use async_smarthome2::{
     device::{
         socket::{SmartSocket, SwitchOffEvent, SwitchOnEvent},
         thermometer::SmartThermometer,
-        Device, StateEvent,
+        AsyncDevice, StateEvent,
     },
     house::{DeviceInfo, DeviceNotifier, RoomGetter, SmartHouse},
     room::SmartRoom,
@@ -64,7 +62,6 @@ async fn smart_home_test() {
     assert_eq!(room_ref.name(), "Room1");
 
     let thermometer3 = SmartThermometer::new("Thermometer3", 30.0);
-    let thermometer3_id = thermometer3.id();
 
     *room_ref += thermometer3;
     assert_eq!(room_ref.devices().count(), 3);
@@ -101,94 +98,138 @@ async fn smart_home_test() {
     assert!(house1.info("Room1814", "Mixer").is_err());
 
     let state = house1
-        .notify(room1_id, socket1_id, &StateEvent::new())
+        .async_notify(room1_id, socket1_id, Box::pin(StateEvent::new()))
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify(room1_id, socket1_id, &SwitchOnEvent::new())
+        .async_notify(room1_id, socket1_id, Box::pin(SwitchOnEvent::new()))
+        .await
         .unwrap();
     assert!(state.enabled().unwrap());
 
     let state = house1
-        .notify(room1_id, socket1_id, &SwitchOffEvent::new())
+        .async_notify(room1_id, socket1_id, Box::pin(SwitchOffEvent::new()))
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify(room1_id, thermometer1_id, &StateEvent::new())
+        .async_notify(room1_id, thermometer1_id, Box::pin(StateEvent::new()))
+        .await
         .unwrap();
     assert_eq!(state.themperature().unwrap(), 20.0);
 
     let state = house1
-        .notify(room1_id, "Socket1", &StateEvent::new())
+        .async_notify(room1_id, "Socket1".to_string(), Box::pin(StateEvent::new()))
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify(room1_id, "Socket1", &SwitchOnEvent::new())
+        .async_notify(
+            room1_id,
+            "Socket1".to_string(),
+            Box::pin(SwitchOnEvent::new()),
+        )
+        .await
         .unwrap();
     assert!(state.enabled().unwrap());
 
     let state = house1
-        .notify(room1_id, "Socket1", &SwitchOffEvent::new())
+        .async_notify(
+            room1_id,
+            "Socket1".to_string(),
+            Box::pin(SwitchOffEvent::new()),
+        )
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify(room1_id, "Thermometer1", &StateEvent::new())
+        .async_notify(
+            room1_id,
+            "Thermometer1".to_string(),
+            Box::pin(StateEvent::new()),
+        )
+        .await
         .unwrap();
     assert_eq!(state.themperature().unwrap(), 20.0);
 
     let state = house1
-        .notify("Room1", socket1_id, &StateEvent::new())
+        .async_notify("Room1".to_string(), socket1_id, Box::pin(StateEvent::new()))
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify("Room1", socket1_id, &SwitchOnEvent::new())
+        .async_notify(
+            "Room1".to_string(),
+            socket1_id,
+            Box::pin(SwitchOnEvent::new()),
+        )
+        .await
         .unwrap();
     assert!(state.enabled().unwrap());
 
     let state = house1
-        .notify("Room1", socket1_id, &SwitchOffEvent::new())
+        .async_notify(
+            "Room1".to_string(),
+            socket1_id,
+            Box::pin(SwitchOffEvent::new()),
+        )
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify("Room1", thermometer1_id, &StateEvent::new())
+        .async_notify(
+            "Room1".to_string(),
+            thermometer1_id,
+            Box::pin(StateEvent::new()),
+        )
+        .await
         .unwrap();
     assert_eq!(state.themperature().unwrap(), 20.0);
 
     let state = house1
-        .notify("Room1", "Socket1", &StateEvent::new())
+        .async_notify(
+            "Room1".to_string(),
+            "Socket1".to_string(),
+            Box::pin(StateEvent::new()),
+        )
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify("Room1", "Socket1", &SwitchOnEvent::new())
+        .async_notify(
+            "Room1".to_string(),
+            "Socket1".to_string(),
+            Box::pin(SwitchOnEvent::new()),
+        )
+        .await
         .unwrap();
     assert!(state.enabled().unwrap());
 
     let state = house1
-        .notify("Room1", "Socket1", &SwitchOffEvent::new())
+        .async_notify(
+            "Room1".to_string(),
+            "Socket1".to_string(),
+            Box::pin(SwitchOffEvent::new()),
+        )
+        .await
         .unwrap();
     assert!(!state.enabled().unwrap());
 
     let state = house1
-        .notify("Room1", "Thermometer1", &StateEvent::new())
+        .async_notify(
+            "Room1".to_string(),
+            "Thermometer1".to_string(),
+            Box::pin(StateEvent::new()),
+        )
+        .await
         .unwrap();
     assert_eq!(state.themperature().unwrap(), 20.0);
-
-    let themperature_info: HashMap<Uuid, f64> = house1
-        .notify_all(&StateEvent::new())
-        .filter_map(|s| {
-            s.themperature()
-                .as_ref()
-                .map(|themperature| (s.device_id(), *themperature))
-        })
-        .collect();
-    assert_eq!(themperature_info[&thermometer1_id], 20.0);
-    assert_eq!(themperature_info[&thermometer2_id], 25.0);
-    assert_eq!(themperature_info[&thermometer3_id], 30.0);
 }
