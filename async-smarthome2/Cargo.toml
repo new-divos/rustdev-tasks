@@ -1,0 +1,18 @@
+[package]
+name = "async-smarthome2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bincode = {version = "^1"}
+futures = {version = "^0.3"}
+log = {version = "^0.4"}
+rand = {version = "^0.8"}
+serde = {version = "^1", features = ["derive"]}
+statrs = {version = "^0.15"}
+thiserror = {version = "^1"}
+tokio = {version = "^1.20", features = ["full"]}
+uuid = {version = "^1", features = ["v4", "fast-rng", "serde"]}
+
+[dev-dependencies]
+env_logger = "^0.9"
