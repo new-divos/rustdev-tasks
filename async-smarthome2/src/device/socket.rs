@@ -1,12 +1,13 @@
-use std::fmt;
+use std::{fmt, pin::Pin};
 
+use async_trait::async_trait;
 use futures::executor::block_on;
 use tokio::net::ToSocketAddrs;
 use uuid::Uuid;
 
 use crate::{
     control::{client::ControlClient, message::ControlRequest},
-    device::{Device, DeviceState, Event, StateEvent},
+    device::{AsyncDevice, Device, DeviceState, Event, StateEvent},
     error::DeviceError,
 };
 
@@ -55,6 +56,62 @@ impl fmt::Display for SmartSocket {
         }
 
         write!(f, "{}", v.join(""))
+    }
+}
+
+#[async_trait]
+impl AsyncDevice for SmartSocket {
+    ///
+    /// Получить идентификатор "умной" розетки.
+    ///
+    async fn id(&self) -> Uuid {
+        self.id
+    }
+
+    ///
+    /// Получить имя "умной" розетки.
+    ///
+    async fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    async fn async_notify(
+        &mut self,
+        e: Pin<Box<dyn Event + Send + Sync>>,
+    ) -> Result<DeviceState, DeviceError> {
+        match e.id() {
+            StateEvent::ID => Ok(DeviceState::for_socket(
+                self.id,
+                e.id(),
+                self.enabled,
+                self.power(),
+            )),
+
+            SwitchOnEvent::ID => {
+                self.switch_on();
+                Ok(DeviceState::for_socket(
+                    self.id,
+                    e.id(),
+                    self.enabled,
+                    self.power(),
+                ))
+            }
+
+            SwitchOffEvent::ID => {
+                self.switch_off();
+                Ok(DeviceState::for_socket(
+                    self.id,
+                    e.id(),
+                    self.enabled,
+                    self.power(),
+                ))
+            }
+
+            id => Err(DeviceError::NotImplementedEvent(id)),
+        }
     }
 }
 
@@ -220,6 +277,63 @@ impl fmt::Display for RemoteSmartSocket {
         }
 
         Err(fmt::Error)
+    }
+}
+
+#[async_trait]
+impl AsyncDevice for RemoteSmartSocket {
+    ///
+    /// Идентификатор удаленной "умной" розетки.
+    ///
+    async fn id(&self) -> Uuid {
+        self.id
+    }
+
+    ///
+    /// Получить имя удаленной "умной" розетки.
+    ///
+    async fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    async fn async_notify(
+        &mut self,
+        e: Pin<Box<dyn Event + Send + Sync>>,
+    ) -> Result<DeviceState, DeviceError> {
+        let response = match e.id() {
+            SwitchOnEvent::ID => {
+                self.client
+                    .request(ControlRequest::switch_on_remote_device())
+                    .await?
+            }
+
+            SwitchOffEvent::ID => {
+                self.client
+                    .request(ControlRequest::switch_off_remote_device())
+                    .await?
+            }
+
+            StateEvent::ID => {
+                self.client
+                    .request(ControlRequest::acquire_remote_device_state())
+                    .await?
+            }
+
+            id => {
+                return Err(DeviceError::NotImplementedEvent(id));
+            }
+        };
+
+        if let Some(state) = response.state() {
+            if state.device_id() == self.id {
+                return Ok(state);
+            }
+        }
+
+        Err(DeviceError::UnexpectedMessage)
     }
 }
 

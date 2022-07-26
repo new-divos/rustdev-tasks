@@ -39,7 +39,7 @@ pub trait AsyncDevice: fmt::Display {
     ///
     async fn async_notify(
         &mut self,
-        e: Pin<Box<dyn Event + Send>>,
+        e: Pin<Box<dyn Event + Send + Sync>>,
     ) -> Result<DeviceState, DeviceError>;
 }
 

@@ -83,7 +83,7 @@ impl AsyncDevice for SmartThermometer {
     ///
     async fn async_notify(
         &mut self,
-        e: Pin<Box<dyn Event + Send>>,
+        e: Pin<Box<dyn Event + Send + Sync>>,
     ) -> Result<DeviceState, DeviceError> {
         if e.id() == StateEvent::ID {
             Ok(DeviceState::for_thermometer(
@@ -396,7 +396,7 @@ impl AsyncDevice for RemoteThermometer {
     ///
     async fn async_notify(
         &mut self,
-        e: Pin<Box<dyn Event + Send>>,
+        e: Pin<Box<dyn Event + Send + Sync>>,
     ) -> Result<DeviceState, DeviceError> {
         if e.id() == StateEvent::ID {
             let (id, temperature) = {

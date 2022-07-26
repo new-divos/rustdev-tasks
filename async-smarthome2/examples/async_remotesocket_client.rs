@@ -2,7 +2,7 @@ use tokio::fs;
 
 use async_smarthome2::device::{
     socket::{RemoteSmartSocket, SwitchOffEvent, SwitchOnEvent},
-    Device,
+    AsyncDevice,
 };
 
 #[tokio::main]
@@ -14,10 +14,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut remote_socket = RemoteSmartSocket::connect(addr).await?;
     println!("Удаленная розетка: {}", remote_socket);
 
-    let _ = remote_socket.notify(&SwitchOnEvent::new())?;
+    let _ = remote_socket
+        .async_notify(Box::pin(SwitchOnEvent::new()))
+        .await?;
     println!("Удаленная розетка после включения: {}", remote_socket);
 
-    let _ = remote_socket.notify(&SwitchOffEvent::new())?;
+    let _ = remote_socket
+        .async_notify(Box::pin(SwitchOffEvent::new()))
+        .await?;
     println!("Удаленная розетка после выключения: {}", remote_socket);
 
     Ok(())
