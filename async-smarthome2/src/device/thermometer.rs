@@ -1,22 +1,28 @@
 use std::{
     fmt,
+    pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, RwLock, Weak,
+        Arc, Weak,
     },
     time,
 };
 
+use async_trait::async_trait;
 use bincode::{self, Options};
+use futures::executor::block_on;
 use log;
 use rand::{thread_rng, Rng};
 use statrs::distribution::Normal;
-use tokio::net::{ToSocketAddrs, UdpSocket};
+use tokio::{
+    net::{ToSocketAddrs, UdpSocket},
+    sync::{Mutex, RwLock},
+};
 use uuid::Uuid;
 
 use crate::{
     control::message::ThermometerMessage,
-    device::{Device, DeviceState, Event, StateEvent},
+    device::{AsyncDevice, Device, DeviceState, Event, StateEvent},
     error::DeviceError,
 };
 
@@ -54,6 +60,43 @@ impl fmt::Display for SmartThermometer {
     }
 }
 
+#[async_trait]
+impl AsyncDevice for SmartThermometer {
+    ///
+    /// Получить идентификатор "умного" термометра.
+    ///
+    #[inline]
+    async fn id(&self) -> Uuid {
+        self.id
+    }
+
+    ///
+    /// Получить имя "умного" термометра.
+    ///
+    #[inline]
+    async fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    async fn async_notify(
+        &mut self,
+        e: Pin<Box<dyn Event + Send>>,
+    ) -> Result<DeviceState, DeviceError> {
+        if e.id() == StateEvent::ID {
+            Ok(DeviceState::for_thermometer(
+                self.id,
+                e.id(),
+                self.temperature,
+            ))
+        } else {
+            Err(DeviceError::NotImplementedEvent(e.id()))
+        }
+    }
+}
+
 impl Device for SmartThermometer {
     ///
     /// Получить идентификатор "умного" термометра.
@@ -75,9 +118,9 @@ impl Device for SmartThermometer {
     fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
         if e.id() == StateEvent::ID {
             Ok(DeviceState::for_thermometer(
-                self.id(),
+                self.id,
                 e.id(),
-                self.temperature(),
+                self.temperature,
             ))
         } else {
             Err(DeviceError::NotImplementedEvent(e.id()))
@@ -118,7 +161,7 @@ pub struct AutonomousThermometer {
     ///
     /// Экземпляр "умного" термометра.
     ///
-    thermometer: Arc<RwLock<SmartThermometer>>,
+    thermometer: Arc<Mutex<SmartThermometer>>,
 
     ///
     /// Добавлять шум к показаниям температуры.
@@ -152,8 +195,8 @@ impl AutonomousThermometer {
 
         while (*self.working).load(Ordering::Relaxed) {
             let (mut temperature, id) = {
-                let mut guard = self.thermometer.write().unwrap();
-                let state = guard.notify(&StateEvent::new())?;
+                let mut guard = self.thermometer.lock().await;
+                let state = guard.async_notify(Box::pin(StateEvent::new())).await?;
                 (state.themperature().unwrap(), state.device_id())
             };
             if self.noisy {
@@ -244,7 +287,7 @@ impl<BA: ToSocketAddrs, RA: ToSocketAddrs> AutonomousThermometerBuilder<BA, RA> 
         let working = Arc::new(AtomicBool::new(true));
         let t = AutonomousThermometer {
             socket: UdpSocket::bind(self.addr).await?,
-            thermometer: Arc::new(RwLock::new(thermometer)),
+            thermometer: Arc::new(Mutex::new(thermometer)),
             noisy: self.noisy,
             working: working.clone(),
         };
@@ -319,7 +362,7 @@ impl fmt::Display for RemoteThermometer {
     ///
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (id, temperature) = {
-            let guard = self.data.read().unwrap();
+            let guard = block_on(self.data.read());
             *guard
         };
 
@@ -331,12 +374,49 @@ impl fmt::Display for RemoteThermometer {
     }
 }
 
+#[async_trait]
+impl AsyncDevice for RemoteThermometer {
+    ///
+    /// Получить идентификатор удаленного "умного" термометра.
+    ///
+    async fn id(&self) -> Uuid {
+        let guard = self.data.read().await;
+        guard.0
+    }
+
+    ///
+    /// Получить имя удаленного "умного" термометра.
+    ///
+    async fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    async fn async_notify(
+        &mut self,
+        e: Pin<Box<dyn Event + Send>>,
+    ) -> Result<DeviceState, DeviceError> {
+        if e.id() == StateEvent::ID {
+            let (id, temperature) = {
+                let guard = self.data.read().await;
+                *guard
+            };
+
+            Ok(DeviceState::for_thermometer(id, e.id(), temperature))
+        } else {
+            Err(DeviceError::NotImplementedEvent(e.id()))
+        }
+    }
+}
+
 impl Device for RemoteThermometer {
     ///
     /// Получить идентификатор удаленного "умного" термометра.
     ///
     fn id(&self) -> Uuid {
-        let guard = self.data.read().unwrap();
+        let guard = block_on(self.data.read());
         let (id, _) = *guard;
 
         id
@@ -355,7 +435,7 @@ impl Device for RemoteThermometer {
     fn notify(&mut self, e: &dyn Event) -> Result<DeviceState, DeviceError> {
         if e.id() == StateEvent::ID {
             let (id, temperature) = {
-                let guard = self.data.read().unwrap();
+                let guard = block_on(self.data.read());
                 *guard
             };
 
@@ -469,7 +549,7 @@ impl<BA: ToSocketAddrs + Send, RA: ToSocketAddrs + Send> RemoteThermometerBuilde
                                     .with_big_endian()
                                     .deserialize::<ThermometerMessage>(&buf[..received])
                             {
-                                let mut guard = cloned.write().unwrap();
+                                let mut guard = cloned.write().await;
                                 *guard = (message.id(), message.temperature());
                             } else {
                                 log::error!("Message deserialization error");

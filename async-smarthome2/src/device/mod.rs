@@ -1,5 +1,6 @@
-use std::fmt;
+use std::{fmt, pin::Pin};
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -16,6 +17,30 @@ pub trait Event {
     /// Получить идентификатор класса события.
     ///
     fn id(&self) -> Uuid;
+}
+
+///
+/// Типаж, описывающий асинхронное устройство.
+///
+#[async_trait]
+pub trait AsyncDevice: fmt::Display {
+    ///
+    /// Получить идентификатор устройства.
+    ///
+    async fn id(&self) -> Uuid;
+
+    ///
+    /// Получить имя устройства.
+    ///
+    async fn name(&self) -> &str;
+
+    ///
+    /// Обработать событие устройством.
+    ///
+    async fn async_notify(
+        &mut self,
+        e: Pin<Box<dyn Event + Send>>,
+    ) -> Result<DeviceState, DeviceError>;
 }
 
 ///

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+async-trait = {version = "^0.1"}
 bincode = {version = "^1"}
 futures = {version = "^0.3"}
 log = {version = "^0.4"}
