@@ -1,2 +1,8 @@
 [workspace]
-members = ["fizzbuzz", "smarthome", "smarthome2", "async-smarthome2"]
+members = [
+    "fizzbuzz", 
+    "smarthome", 
+    "smarthome2", 
+    "async-smarthome2", 
+    "xml-builder"
+]
