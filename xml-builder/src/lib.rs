@@ -1,9 +1,10 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 pub mod attribute;
+pub mod document;
 pub mod element;
 
-pub trait XmlObject {
+pub trait XmlObject: fmt::Debug + fmt::Display {
     fn attributes(&'static self) -> Box<dyn Iterator<Item = &attribute::XmlAttribute>> {
         Box::new(EmptyAttributesIter::<'_> {
             phantom: PhantomData::<&'_ attribute::XmlAttribute> {},

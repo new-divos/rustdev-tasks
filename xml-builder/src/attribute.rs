@@ -5,7 +5,10 @@ use std::fmt;
 ///
 #[derive(Debug, Clone)]
 pub struct XmlAttribute {
+    // Имя атрибута.
     name: String,
+
+    // Значение атрибута.
     value: String,
 }
 
