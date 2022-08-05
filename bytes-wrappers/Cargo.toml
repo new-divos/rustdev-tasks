@@ -1,0 +1,13 @@
+[package]
+name = "bytes-wrappers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+crc = {version = "^3.0"}
+thiserror = {version = "^1"}
+rand = {version = "^0.8"}
+rand_chacha = {version = "^0.3"}
+
+[dev-dependencies]
+lipsum = {version = "^0.8"}
