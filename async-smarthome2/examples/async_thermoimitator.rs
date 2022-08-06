@@ -1,11 +1,12 @@
 use std::sync::atomic::Ordering;
 
+use anyhow::{Context, Result};
 use tokio::{fs, signal};
 
 use async_smarthome2::device::thermometer::{AutonomousThermometer, SmartThermometer};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     env_logger::init();
 
     let thermometer = SmartThermometer::new("Автономный термометер", 20.0);
@@ -22,7 +23,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .with_noise()
         .build(thermometer)
-        .await?;
+        .await
+        .context("Failed to initialize the autonomous thermometer")?;
 
     tokio::spawn(async move {
         signal::ctrl_c().await.unwrap();
@@ -33,6 +35,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    thermometer.run().await?;
+    thermometer
+        .run()
+        .await
+        .context("Failed to run the autonomous thermometer")?;
     Ok(())
 }

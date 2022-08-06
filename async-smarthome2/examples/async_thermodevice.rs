@@ -6,12 +6,13 @@ use std::{
     time,
 };
 
+use anyhow::Result;
 use tokio::{fs, signal};
 
 use async_smarthome2::device::thermometer::RemoteThermometer;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     env_logger::init();
 
     let thermometer = RemoteThermometer::builder()
