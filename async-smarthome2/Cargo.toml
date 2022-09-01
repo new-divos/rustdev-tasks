@@ -10,7 +10,7 @@ futures = {version = "^0.3"}
 log = {version = "^0.4"}
 rand = {version = "^0.8"}
 serde = {version = "^1", features = ["derive"]}
-statrs = {version = "^0.15"}
+statrs = {version = "^0.16"}
 thiserror = {version = "^1"}
 tokio = {version = "^1.20", features = ["full"]}
 uuid = {version = "^1", features = ["v4", "fast-rng", "serde"]}

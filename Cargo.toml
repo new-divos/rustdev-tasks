@@ -6,4 +6,5 @@ members = [
     "async-smarthome2", 
     "xml-builder",
     "bytes-wrappers",
+    "web-smarthome2",
 ]
