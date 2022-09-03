@@ -38,4 +38,7 @@ pub enum Error {
 
     #[error("configuration serialization error {0}")]
     ConfigSerializeError(#[from] toml::ser::Error),
+
+    #[error("SQL error {0}")]
+    SQLError(#[from] sqlx::Error),
 }

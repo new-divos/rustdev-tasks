@@ -13,7 +13,7 @@ use crate::error::Error;
 ///
 /// Конфигурация умного дома.
 ///
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct HouseConfig {
     // Идентификатор дома.
     #[serde(rename = "ID")]
@@ -27,7 +27,7 @@ pub(crate) struct HouseConfig {
 ///
 /// Конфигурация базы данных.
 ///
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct DatabaseConfig {
     // URL для подключения к базе данных.
     #[serde(rename = "URL")]
@@ -37,7 +37,7 @@ pub(crate) struct DatabaseConfig {
 ///
 /// Конфигурация программы.
 ///
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     // Настройки дома.
     #[serde(rename = "House")]
