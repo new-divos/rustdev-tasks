@@ -19,7 +19,18 @@ async fn main() -> Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(house.clone()))
-            .service(web::scope("/rooms").route("", web::post().to(routes::room::new_room)))
+            .default_service(web::route().to(routes::not_found))
+            .service(
+                web::scope("/rooms")
+                    .route("", web::post().to(routes::room::new_room))
+                    .route("", web::get().to(routes::room::all_rooms))
+                    .service(
+                        web::scope("/{room_id}")
+                            .route("", web::get().to(routes::room::get_room))
+                            .route("", web::delete().to(routes::room::delete_room))
+                            .route("", web::put().to(routes::room::update_room)),
+                    ),
+            )
     })
     .bind(("127.0.0.1", 8080))
     .context("HTTP server binding")?

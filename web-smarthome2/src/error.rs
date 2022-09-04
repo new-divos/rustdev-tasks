@@ -1,3 +1,9 @@
+use actix_web::{
+    error,
+    http::{header::ContentType, StatusCode},
+    HttpResponse,
+};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -9,20 +15,17 @@ pub enum Error {
     #[error("application initialization error")]
     AppInitError,
 
-    #[error("illegal room name \"{0}\"")]
-    IllegalRoomName(String),
-
-    #[error("illegal device name \"{0}\"")]
-    IllegalDeviceName(String),
-
     #[error("illegal room identifier {0}")]
     IllegalRoomId(Uuid),
 
-    #[error("illegal device identifier {0}")]
-    IllegalDeviceId(Uuid),
+    #[error("illegal room name {0}")]
+    IllegalRoomName(String),
 
-    #[error("the event {0} is not implemented")]
-    NotImplementedEvent(Uuid),
+    #[error("illegal socket identifier {0}")]
+    IllegalSocketId(Uuid),
+
+    #[error("illegal thermometer identifier {0}")]
+    IllegalThermometerId(Uuid),
 
     #[error("unexpected message")]
     UnexpectedMessage,
@@ -41,4 +44,63 @@ pub enum Error {
 
     #[error("SQL error {0}")]
     SQLError(#[from] sqlx::Error),
+}
+
+impl error::ResponseError for Error {
+    ///
+    /// Получить код статуса в зависимости от типа ошибки.
+    ///
+    fn status_code(&self) -> StatusCode {
+        match *self {
+            Error::IllegalRoomId(_)
+            | Error::IllegalSocketId(_)
+            | Error::IllegalThermometerId(_) => StatusCode::NOT_FOUND,
+
+            Error::IllegalRoomName(_) => StatusCode::FORBIDDEN,
+
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    ///
+    /// Получить HTTP-ответ для заданного типа ошибки.
+    ///
+    fn error_response(&self) -> HttpResponse {
+        HttpResponse::build(self.status_code())
+            .insert_header(ContentType::json())
+            .json(ErrorInfo::with_error(self))
+    }
+}
+
+///
+/// Структура с информацией об ошибке при работе с программой.
+///
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub(crate) struct ErrorInfo {
+    ///
+    /// Информация об ошибке.
+    ///
+    error: String,
+}
+
+impl ErrorInfo {
+    ///
+    /// Создать информациб об ошибке.
+    ///
+    #[inline]
+    pub(crate) fn new<S: AsRef<str>>(message: S) -> Self {
+        Self {
+            error: message.as_ref().to_string(),
+        }
+    }
+
+    ///
+    /// Получить информацию об ошибке.
+    ///
+    #[inline]
+    pub(crate) fn with_error(error: &Error) -> Self {
+        Self {
+            error: error.to_string(),
+        }
+    }
 }

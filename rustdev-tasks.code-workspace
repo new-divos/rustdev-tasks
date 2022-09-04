@@ -37,6 +37,7 @@
       "commandCenter.border": "#15202b99"
     },
     "peacock.color": "#f2c399",
-    "rust-analyzer.rustfmt.rangeFormatting.enable": true
+    "rust-analyzer.rustfmt.rangeFormatting.enable": true,
+    "task.allowAutomaticTasks": "on"
   }
 }
