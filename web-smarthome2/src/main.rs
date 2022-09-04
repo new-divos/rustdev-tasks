@@ -28,7 +28,15 @@ async fn main() -> Result<()> {
                         web::scope("/{room_id}")
                             .route("", web::get().to(routes::room::get_room))
                             .route("", web::delete().to(routes::room::delete_room))
-                            .route("", web::put().to(routes::room::update_room)),
+                            .route("", web::put().to(routes::room::update_room))
+                            .service(
+                                web::scope("/thermometers")
+                                    .route("", web::post().to(routes::thermometer::new_thermometer))
+                                    .route(
+                                        "",
+                                        web::get().to(routes::thermometer::all_thermometers),
+                                    ),
+                            ),
                     ),
             )
     })

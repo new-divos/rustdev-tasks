@@ -1,8 +1,14 @@
+use std::iter::FromIterator;
+
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 use uuid::Uuid;
 
-use crate::{config::Config, error::Error};
+use crate::{
+    config::Config,
+    db::model::thermometer::{ThermometerInfo, ThermometerRow},
+    error::Error,
+};
 
 ///
 /// Структура, описывающая умный дом, будет также определять состояние приложения.
@@ -10,6 +16,7 @@ use crate::{config::Config, error::Error};
 #[derive(Debug, Clone)]
 pub struct SmartHouse {
     id: Uuid,
+    name: String,
     pool: SqlitePool,
 }
 
@@ -32,8 +39,25 @@ impl SmartHouse {
 
         Ok(Self {
             id: config.house_id(),
+            name: config.house_name().to_string(),
             pool,
         })
+    }
+
+    ///
+    /// Получить идентификатор умного дома.
+    ///
+    #[inline]
+    pub fn house_id(&self) -> Uuid {
+        self.id
+    }
+
+    ///
+    /// Получить наименование умного дома.
+    ///
+    #[inline]
+    pub fn house_name(&self) -> &str {
+        self.name.as_str()
     }
 
     ///
@@ -193,33 +217,199 @@ impl NewRoom {
 ///
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, FromRow)]
 struct RoomRow {
+    ///
+    /// Идентификатор комнаты умного дома.
+    ///
     id: Uuid,
+
+    ///
+    /// Наименование комнаты умного дома.
+    ///
     name: String,
+
+    ///
+    /// Идентификатор умного дома.
+    ///
     house_id: Uuid,
 }
 
+///
+/// Структура, описывающая состояние комнаты умного дома.
+///
 #[derive(Clone, Debug)]
 pub struct Room {
+    ///
+    /// Идентификатор комнаты умного дома.
+    ///
     id: Uuid,
+
+    ///
+    /// Наименование комнаты умного дома.
+    ///
     name: String,
+
+    ///
+    /// Идентификатор умного дома.
+    ///
     house_id: Uuid,
+
+    ///
+    /// Пул запросов SQL.
+    ///
     pool: SqlitePool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct RoomInfo {
-    id: Uuid,
-    name: String,
-    house_id: Uuid,
+impl Room {
+    ///
+    /// Получить идентификатор комнаты умного дома.
+    ///
+    #[inline]
+    pub fn room_id(&self) -> Uuid {
+        self.id
+    }
+
+    ///
+    /// Получить наименование комнаты умного дома.
+    ///
+    #[inline]
+    pub fn room_name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Создать новый термометр в комнате умного дома с уникальным именем
+    /// и начальным значением температуры.
+    ///
+    pub async fn create_thermometer<S: AsRef<str>>(
+        &self,
+        name: S,
+        temperature: f64,
+    ) -> Result<ThermometerInfo, Error> {
+        let thermometer_name = name.as_ref().to_string();
+
+        let thermometers: Vec<_> = sqlx::query_as::<_, ThermometerRow>(
+            "
+            SELECT * FROM thermometers 
+            JOIN rooms ON room.id = thermometers.room_id
+            WHERE room.house_id = $1;
+            ",
+        )
+        .bind(self.house_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        if !thermometers.is_empty() {
+            return Err(Error::IllegalThermometerName(thermometer_name));
+        }
+
+        let thermometer_id = Uuid::new_v4();
+        sqlx::query(
+            "
+            INSERT INTO thermometers VALUES($1, $2, $3, $4);
+            ",
+        )
+        .bind(thermometer_id)
+        .bind(thermometer_name.as_str())
+        .bind(self.id)
+        .bind(temperature)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(ThermometerInfo::new(
+            thermometer_id,
+            thermometer_name,
+            temperature,
+        ))
+    }
+
+    ///
+    /// Получить информацию о всех термометрах в комнате.
+    ///
+    pub async fn all_thermometers(&self) -> Result<Vec<ThermometerInfo>, Error> {
+        let mut thermometers: Vec<_> = sqlx::query_as::<_, ThermometerRow>(
+            "
+            SELECT * FROM thermometers WHERE room_id = $1;
+            ",
+        )
+        .bind(self.id)
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(ThermometerInfo::from)
+        .collect();
+
+        thermometers.shrink_to_fit();
+        Ok(thermometers)
+    }
 }
 
-impl From<Room> for RoomInfo {
-    #[inline]
-    fn from(room: Room) -> Self {
-        Self {
+///
+/// Информация о комнате умного дома.
+///
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct RoomInfo {
+    ///
+    /// Идентификатор комнаты умного дома.
+    ///
+    id: Uuid,
+
+    ///
+    /// Наименование комнаты умного дома.
+    ///
+    name: String,
+
+    ///
+    /// Информация о термометрах в комнате.
+    ///
+    thermometers: Vec<ThermometerInfo>,
+}
+
+impl RoomInfo {
+    ///
+    /// Получить информацию о комнате умного дома.
+    ///
+    pub async fn with_room(room: Room) -> Result<Self, Error> {
+        let thermometers = room.all_thermometers().await?;
+
+        Ok(Self {
             id: room.id,
             name: room.name,
-            house_id: room.house_id,
+            thermometers,
+        })
+    }
+}
+
+///
+/// Информация об умном доме.
+///
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct HouseInfo {
+    ///
+    /// Идентификатор умного дома.
+    ///
+    id: Uuid,
+
+    ///
+    /// Наименование умного дома.
+    ///
+    name: String,
+
+    ///
+    /// Список комнат умного дома.
+    ///
+    rooms: Vec<RoomInfo>,
+}
+
+impl HouseInfo {
+    ///
+    /// Сформировать информацию об умном доме.
+    ///
+    #[inline]
+    pub fn new<S: AsRef<str>>(id: Uuid, name: S, rooms: impl Iterator<Item = RoomInfo>) -> Self {
+        Self {
+            id,
+            name: name.as_ref().to_string(),
+            rooms: Vec::<RoomInfo>::from_iter(rooms),
         }
     }
 }

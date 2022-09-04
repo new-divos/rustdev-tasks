@@ -21,9 +21,36 @@ pub(crate) async fn create_schema(db_url: &str) -> Result<(), sqlx::Error> {
             name     TEXT NOT NULL,
             house_id BLOB(16) NOT NULL,
 
-            CONSTRAINT fk_houses
+            CONSTRAINT fk_houses_rooms
                 FOREIGN KEY (house_id)
                 REFERENCES houses(id)
+                ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS thermometers 
+        (
+            id          BLOB(16) PRIMARY KEY NOT NULL,
+            name        TEXT NOT NULL,
+            room_id     BLOB(16) NOT NULL,
+            temperature DOUBLE NOT NULL,
+
+            CONSTRAINT fk_rooms_thermometers
+                FOREIGN KEY (room_id)
+                REFERENCES rooms(id)
+                ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS sockets
+        (
+            id BLOB(16) PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL,
+            room_id BLOB(16) NOT NULL,
+            switched BOOLEAN NOT NULL,
+            power DOUBLE NOT NULL,
+
+            CONSTRAINT fk_rooms_sockets
+                FOREIGN KEY (room_id)
+                REFERENCES rooms(id)
                 ON DELETE CASCADE
         );
     ",

@@ -24,8 +24,14 @@ pub enum Error {
     #[error("illegal socket identifier {0}")]
     IllegalSocketId(Uuid),
 
+    #[error("illegal socket name {0}")]
+    IllegalSocketName(String),
+
     #[error("illegal thermometer identifier {0}")]
     IllegalThermometerId(Uuid),
+
+    #[error("illegal thermometer name {0}")]
+    IllegalThermometerName(String),
 
     #[error("unexpected message")]
     UnexpectedMessage,
@@ -56,7 +62,9 @@ impl error::ResponseError for Error {
             | Error::IllegalSocketId(_)
             | Error::IllegalThermometerId(_) => StatusCode::NOT_FOUND,
 
-            Error::IllegalRoomName(_) => StatusCode::FORBIDDEN,
+            Error::IllegalRoomName(_)
+            | Error::IllegalSocketName(_)
+            | Error::IllegalThermometerName(_) => StatusCode::FORBIDDEN,
 
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{db::model::house::SmartHouse, error::ErrorInfo};
 
 pub mod room;
+pub mod thermometer;
 
 ///
 /// Структура с описанием статуса успешно выполненной операции.
