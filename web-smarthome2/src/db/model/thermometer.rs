@@ -115,10 +115,50 @@ impl ThermometerInfo {
             temperature,
         }
     }
+
+    ///
+    /// Получить идентификатор термометра.
+    ///
+    #[inline]
+    pub fn thermometer_id(&self) -> Uuid {
+        self.id
+    }
+
+    ///
+    /// Получить наименование термометра.
+    ///
+    #[inline]
+    pub fn thermometer_name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    ///
+    /// Установить наименование термометра.
+    ///
+    #[inline]
+    pub(crate) fn set_name(&mut self, name: &str) {
+        self.name = name.to_string();
+    }
+
+    ///
+    /// Получить значение температуры.
+    ///
+    #[inline]
+    pub fn temperature(&self) -> f64 {
+        self.temperature
+    }
+
+    ///
+    /// Установить значение температуры.
+    ///
+    #[inline]
+    pub(crate) fn set_temperature(&mut self, temperature: f64) {
+        self.temperature = temperature;
+    }
 }
 
 ///
-/// Структура с информацией об умном термометре.
+/// Структура с информацией об умных термометрах в комнате.
 ///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ThermometersInfo {
@@ -154,4 +194,16 @@ impl ThermometersInfo {
             thermometers: Vec::<ThermometerInfo>::from_iter(thermometers),
         }
     }
+}
+
+///
+/// Структура для обновления парраметров умного термометра.
+///
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ThermometerData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) temperature: Option<f64>,
 }

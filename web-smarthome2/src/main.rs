@@ -33,10 +33,23 @@ async fn main() -> Result<()> {
                                 web::scope("/thermometers")
                                     .route("", web::post().to(routes::thermometer::new_thermometer))
                                     .route("", web::get().to(routes::thermometer::all_thermometers))
-                                    .service(web::scope("/{thermometer_id}").route(
-                                        "",
-                                        web::get().to(routes::thermometer::get_thermometer),
-                                    )),
+                                    .service(
+                                        web::scope("/{thermometer_id}")
+                                            .route(
+                                                "",
+                                                web::get().to(routes::thermometer::get_thermometer),
+                                            )
+                                            .route(
+                                                "",
+                                                web::delete()
+                                                    .to(routes::thermometer::delete_thermometer),
+                                            )
+                                            .route(
+                                                "",
+                                                web::put()
+                                                    .to(routes::thermometer::update_thermometer),
+                                            ),
+                                    ),
                             ),
                     ),
             )

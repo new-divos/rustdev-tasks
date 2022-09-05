@@ -167,6 +167,22 @@ impl SmartHouse {
     }
 
     ///
+    /// Удалить все комнаты умного дома с заданным идентификатором.
+    ///
+    pub async fn delete_rooms(&self) -> Result<(), Error> {
+        sqlx::query(
+            "
+            DELETE FROM rooms WHERE house_id = $1;
+            ",
+        )
+        .bind(self.id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    ///
     /// Установить имя комнаты умного дома с заданным идентификатором.
     ///
     pub async fn update_room<S: AsRef<str>>(
@@ -370,6 +386,82 @@ impl Room {
         } else {
             Err(Error::IllegalThermometerId(thermometer_id))
         }
+    }
+
+    ///
+    /// Удалить термометр с заданным идентификатором.
+    ///
+    pub async fn delete_thermometer(&self, thermometer_id: Uuid) -> Result<(), Error> {
+        sqlx::query(
+            "
+            DELETE FROM thermometers WHERE id = $1;
+            ",
+        )
+        .bind(thermometer_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    ///
+    /// Обновить данные термометра с заданным идентификатором.
+    ///
+    pub async fn update_thermometer<S: AsRef<str>>(
+        &self,
+        thermometer_id: Uuid,
+        name: Option<S>,
+        temperature: Option<f64>,
+    ) -> Result<ThermometerInfo, Error> {
+        let mut thermometer_info = self.get_thermometer(thermometer_id).await?;
+
+        let thermometer_name;
+        let qry = match (name, temperature) {
+            (None, None) => return Ok(thermometer_info),
+
+            (None, Some(temperature)) => {
+                thermometer_info.set_temperature(temperature);
+
+                sqlx::query(
+                    "
+                    UPDATE thermometers SET temperature = $1 WHERE id = $2;
+                    ",
+                )
+                .bind(temperature)
+                .bind(thermometer_id)
+            }
+
+            (Some(name), None) => {
+                thermometer_name = name.as_ref().to_string();
+                thermometer_info.set_name(thermometer_name.as_str());
+
+                sqlx::query(
+                    "
+                    UPDATE thermometers SET name = $1 WHERE id = $2;
+                    ",
+                )
+                .bind(thermometer_name.as_str())
+                .bind(thermometer_id)
+            }
+
+            (Some(name), Some(temperature)) => {
+                thermometer_name = name.as_ref().to_string();
+                thermometer_info.set_name(thermometer_name.as_str());
+                thermometer_info.set_temperature(temperature);
+
+                sqlx::query(
+                    "
+                    UPDATE thermometers SET name = $1, temperature = $2 WHERE id = $3;
+                    ",
+                )
+                .bind(thermometer_name.as_str())
+                .bind(temperature)
+                .bind(thermometer_id)
+            }
+        };
+
+        qry.execute(&self.pool).await?;
+        Ok(thermometer_info)
     }
 }
 

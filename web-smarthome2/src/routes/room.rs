@@ -41,6 +41,16 @@ pub async fn all_rooms(house: web::Data<SmartHouse>) -> HttpResponse {
 }
 
 ///
+/// Роут для удаления информации о всех комнатах.
+///
+pub async fn delete_rooms(house: web::Data<SmartHouse>) -> HttpResponse {
+    match house.into_inner().delete_rooms().await {
+        Ok(_) => HttpResponse::Ok().json(RequestSuccess::new("all house rooms were deleted")),
+        Err(error) => error.error_response(),
+    }
+}
+
+///
 /// Роут для получения информации о комнате.
 ///
 pub async fn get_room(house: web::Data<SmartHouse>, room_id: web::Path<Uuid>) -> HttpResponse {
@@ -59,7 +69,7 @@ pub async fn get_room(house: web::Data<SmartHouse>, room_id: web::Path<Uuid>) ->
 pub async fn delete_room(house: web::Data<SmartHouse>, room_id: web::Path<Uuid>) -> HttpResponse {
     match house.into_inner().delete_room(*room_id).await {
         Ok(_) => HttpResponse::Ok().json(RequestSuccess::new(format!(
-            "room {} was deleted",
+            "the room {} was deleted",
             *room_id
         ))),
         Err(error) => error.error_response(),
