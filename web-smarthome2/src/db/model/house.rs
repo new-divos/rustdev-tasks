@@ -135,19 +135,23 @@ impl SmartHouse {
             ",
         )
         .bind(room_id)
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
-        Ok(Room {
-            id: room.id,
-            name: room.name,
-            house_id: self.id,
-            pool: self.pool.clone(),
-        })
+        if let Some(room) = room {
+            Ok(Room {
+                id: room.id,
+                name: room.name,
+                house_id: self.id,
+                pool: self.pool.clone(),
+            })
+        } else {
+            Err(Error::IllegalRoomId(room_id))
+        }
     }
 
     ///
-    /// Удалить комнату умного дома по идентификатору.
+    /// Удалить комнату умного дома с заданным идентификатором.
     ///
     pub async fn delete_room(&self, room_id: Uuid) -> Result<(), Error> {
         sqlx::query(
@@ -163,7 +167,7 @@ impl SmartHouse {
     }
 
     ///
-    /// Установить имя комнаты умного дома по идентификатору.
+    /// Установить имя комнаты умного дома с заданным идентификатором.
     ///
     pub async fn update_room<S: AsRef<str>>(
         &self,
@@ -277,6 +281,14 @@ impl Room {
     }
 
     ///
+    /// Получить идентификатор умного дома.
+    ///
+    #[inline]
+    pub fn house_id(&self) -> Uuid {
+        self.house_id
+    }
+
+    ///
     /// Создать новый термометр в комнате умного дома с уникальным именем
     /// и начальным значением температуры.
     ///
@@ -289,12 +301,10 @@ impl Room {
 
         let thermometers: Vec<_> = sqlx::query_as::<_, ThermometerRow>(
             "
-            SELECT * FROM thermometers 
-            JOIN rooms ON room.id = thermometers.room_id
-            WHERE room.house_id = $1;
+            SELECT * FROM thermometers WHERE room_id = $1;
             ",
         )
-        .bind(self.house_id)
+        .bind(self.id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -340,6 +350,26 @@ impl Room {
 
         thermometers.shrink_to_fit();
         Ok(thermometers)
+    }
+
+    ///
+    /// Получить информацию о термометре с заданным идентификатором.
+    ///
+    pub async fn get_thermometer(&self, thermometer_id: Uuid) -> Result<ThermometerInfo, Error> {
+        let thermometer = sqlx::query_as::<_, ThermometerRow>(
+            "
+            SELECT * FROM thermometers WHERE id = $1;
+            ",
+        )
+        .bind(thermometer_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(thermometer) = thermometer {
+            Ok(ThermometerInfo::from(thermometer))
+        } else {
+            Err(Error::IllegalThermometerId(thermometer_id))
+        }
     }
 }
 

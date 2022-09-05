@@ -45,3 +45,20 @@ pub async fn all_thermometers(
         Err(error) => error.error_response(),
     }
 }
+
+///
+/// Роут для получения информации о термометре умного дома.
+///
+pub async fn get_thermometer(
+    house: web::Data<SmartHouse>,
+    room_id: web::Path<Uuid>,
+    thermometer_id: web::Path<Uuid>,
+) -> HttpResponse {
+    match house.into_inner().get_room(*room_id).await {
+        Ok(room) => match room.get_thermometer(*thermometer_id).await {
+            Ok(thermometer) => HttpResponse::Ok().json(thermometer),
+            Err(error) => error.error_response(),
+        },
+        Err(error) => error.error_response(),
+    }
+}

@@ -32,10 +32,11 @@ async fn main() -> Result<()> {
                             .service(
                                 web::scope("/thermometers")
                                     .route("", web::post().to(routes::thermometer::new_thermometer))
-                                    .route(
+                                    .route("", web::get().to(routes::thermometer::all_thermometers))
+                                    .service(web::scope("/{thermometer_id}").route(
                                         "",
-                                        web::get().to(routes::thermometer::all_thermometers),
-                                    ),
+                                        web::get().to(routes::thermometer::get_thermometer),
+                                    )),
                             ),
                     ),
             )
