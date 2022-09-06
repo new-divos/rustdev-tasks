@@ -1,8 +1,4 @@
-use actix_web::{
-    error,
-    http::{header::ContentType, StatusCode},
-    HttpResponse,
-};
+use actix_web::{error, http::StatusCode, HttpResponse};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -74,9 +70,7 @@ impl error::ResponseError for Error {
     /// Получить HTTP-ответ для заданного типа ошибки.
     ///
     fn error_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status_code())
-            .insert_header(ContentType::json())
-            .json(ErrorInfo::with_error(self))
+        HttpResponse::build(self.status_code()).json(ErrorInfo::with_error(self))
     }
 }
 

@@ -185,7 +185,7 @@ impl SmartHouse {
     ///
     /// Установить имя комнаты умного дома с заданным идентификатором.
     ///
-    pub async fn update_room<S: AsRef<str>>(
+    pub async fn update_room_name<S: AsRef<str>>(
         &self,
         room_id: Uuid,
         room_name: S,
@@ -223,6 +223,15 @@ pub struct NewRoom {
 }
 
 impl NewRoom {
+    ///
+    /// Создать экземпляр новой комнаты.
+    ///
+    pub fn new<S: AsRef<str>>(name: S) -> Self {
+        Self {
+            name: name.as_ref().to_string(),
+        }
+    }
+
     ///
     /// Получить имя новой комнаты.
     ///
@@ -405,63 +414,74 @@ impl Room {
     }
 
     ///
+    /// Обновить имя термометра с заданным идентификатором.
+    ///
+    pub async fn update_thermometer_name<S: AsRef<str>>(
+        &self,
+        thermometer_id: Uuid,
+        name: S,
+    ) -> Result<ThermometerInfo, Error> {
+        let mut thermometer_info = self.get_thermometer(thermometer_id).await?;
+
+        sqlx::query(
+            "
+            UPDATE thermometers SET name = $1 WHERE id = $2;
+            ",
+        )
+        .bind(name.as_ref())
+        .bind(thermometer_id)
+        .execute(&self.pool)
+        .await?;
+
+        thermometer_info.set_name(name.as_ref());
+        Ok(thermometer_info)
+    }
+
+    ///
+    /// Обновить температуру термометра с заданным идентификатором.
+    ///
+    pub async fn update_thermometer_temperature(
+        &self,
+        thermometer_id: Uuid,
+        temperature: f64,
+    ) -> Result<ThermometerInfo, Error> {
+        let mut thermometer_info = self.get_thermometer(thermometer_id).await?;
+
+        sqlx::query(
+            "
+            UPDATE thermometers SET temperature = $1 WHERE id = $2;
+            ",
+        )
+        .bind(temperature)
+        .bind(thermometer_id)
+        .execute(&self.pool)
+        .await?;
+
+        thermometer_info.set_temperature(temperature);
+        Ok(thermometer_info)
+    }
+
+    ///
     /// Обновить данные термометра с заданным идентификатором.
     ///
     pub async fn update_thermometer<S: AsRef<str>>(
         &self,
         thermometer_id: Uuid,
-        name: Option<S>,
-        temperature: Option<f64>,
+        name: S,
+        temperature: f64,
     ) -> Result<ThermometerInfo, Error> {
-        let mut thermometer_info = self.get_thermometer(thermometer_id).await?;
+        sqlx::query(
+            "
+                UPDATE thermometers SET name = $1, temperature = $2 WHERE id = $3;
+                ",
+        )
+        .bind(name.as_ref())
+        .bind(temperature)
+        .bind(thermometer_id)
+        .execute(&self.pool)
+        .await?;
 
-        let thermometer_name;
-        let qry = match (name, temperature) {
-            (None, None) => return Ok(thermometer_info),
-
-            (None, Some(temperature)) => {
-                thermometer_info.set_temperature(temperature);
-
-                sqlx::query(
-                    "
-                    UPDATE thermometers SET temperature = $1 WHERE id = $2;
-                    ",
-                )
-                .bind(temperature)
-                .bind(thermometer_id)
-            }
-
-            (Some(name), None) => {
-                thermometer_name = name.as_ref().to_string();
-                thermometer_info.set_name(thermometer_name.as_str());
-
-                sqlx::query(
-                    "
-                    UPDATE thermometers SET name = $1 WHERE id = $2;
-                    ",
-                )
-                .bind(thermometer_name.as_str())
-                .bind(thermometer_id)
-            }
-
-            (Some(name), Some(temperature)) => {
-                thermometer_name = name.as_ref().to_string();
-                thermometer_info.set_name(thermometer_name.as_str());
-                thermometer_info.set_temperature(temperature);
-
-                sqlx::query(
-                    "
-                    UPDATE thermometers SET name = $1, temperature = $2 WHERE id = $3;
-                    ",
-                )
-                .bind(thermometer_name.as_str())
-                .bind(temperature)
-                .bind(thermometer_id)
-            }
-        };
-
-        qry.execute(&self.pool).await?;
-        Ok(thermometer_info)
+        Ok(ThermometerInfo::new(thermometer_id, name, temperature))
     }
 }
 
@@ -534,4 +554,13 @@ impl HouseInfo {
             rooms: Vec::<RoomInfo>::from_iter(rooms),
         }
     }
+}
+
+///
+/// Структура для обновления параметров комнаты умного дома.
+///
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RoomData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) name: Option<String>,
 }

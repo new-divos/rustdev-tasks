@@ -197,7 +197,7 @@ impl ThermometersInfo {
 }
 
 ///
-/// Структура для обновления парраметров умного термометра.
+/// Структура для обновления параметров умного термометра.
 ///
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ThermometerData {
