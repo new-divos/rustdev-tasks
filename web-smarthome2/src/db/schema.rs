@@ -45,7 +45,7 @@ pub(crate) async fn create_schema(db_url: &str) -> Result<(), sqlx::Error> {
             id BLOB(16) PRIMARY KEY NOT NULL,
             name TEXT NOT NULL,
             room_id BLOB(16) NOT NULL,
-            switched BOOLEAN NOT NULL,
+            state BOOLEAN NOT NULL,
             power DOUBLE NOT NULL,
 
             CONSTRAINT fk_rooms_sockets

@@ -11,11 +11,17 @@ pub enum Error {
     #[error("application initialization error")]
     AppInitError,
 
+    #[error("data integrity error")]
+    DataIntegrityError,
+
     #[error("illegal room identifier {0}")]
     IllegalRoomId(Uuid),
 
     #[error("illegal room name {0}")]
     IllegalRoomName(String),
+
+    #[error("illegal device identifier {0} for the room {1}")]
+    IllegalDeviceId(Uuid, Uuid),
 
     #[error("illegal socket identifier {0}")]
     IllegalSocketId(Uuid),
@@ -55,6 +61,7 @@ impl error::ResponseError for Error {
     fn status_code(&self) -> StatusCode {
         match *self {
             Error::IllegalRoomId(_)
+            | Error::IllegalDeviceId(_, _)
             | Error::IllegalSocketId(_)
             | Error::IllegalThermometerId(_) => StatusCode::NOT_FOUND,
 
