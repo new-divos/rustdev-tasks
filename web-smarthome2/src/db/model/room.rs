@@ -62,7 +62,7 @@ pub struct SmartRoom {
     ///
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(flatten)]
-    data: Option<SmartRoomData>,
+    pub(crate) data: Option<SmartRoomData>,
 
     ///
     /// Пул запросов.
@@ -81,6 +81,27 @@ impl SmartRoom {
             room_id,
             house_id,
             data: None,
+            pool: Some(pool),
+        }
+    }
+
+    ///
+    /// Создать комнату умного дома с заданным именем.
+    ///
+    #[inline]
+    pub(crate) fn with_name<S: AsRef<str>>(
+        room_id: Uuid,
+        house_id: Uuid,
+        name: S,
+        pool: SqlitePool,
+    ) -> Self {
+        Self {
+            room_id,
+            house_id,
+            data: Some(SmartRoomData {
+                name: name.as_ref().to_string(),
+                devices: Vec::new(),
+            }),
             pool: Some(pool),
         }
     }
@@ -105,9 +126,8 @@ impl SmartRoom {
     ///
     pub async fn create_socket<S: AsRef<str>>(&self, name: S) -> Result<SmartDevice, Error> {
         if let Some(ref pool) = self.pool {
-            let device_name = name.as_ref().to_string();
-
             let mut tx = pool.begin().await?;
+            let device_name = name.as_ref().to_string();
 
             let sockets = sqlx::query_as::<_, SmartSocketRow>(
                 "
@@ -120,6 +140,7 @@ impl SmartRoom {
             .await?;
 
             if !sockets.is_empty() {
+                tx.rollback().await?;
                 return Err(Error::IllegalSocketName(device_name));
             }
 
@@ -173,6 +194,7 @@ impl SmartRoom {
             .await?;
 
             if !thermometers.is_empty() {
+                tx.rollback().await?;
                 return Err(Error::IllegalThermometerName(device_name));
             }
 
