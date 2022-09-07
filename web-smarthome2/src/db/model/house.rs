@@ -80,6 +80,7 @@ impl SmartHouse {
             return Err(Error::IllegalRoomName(room_name));
         }
 
+        let mut tx = self.pool.begin().await?;
         let room_id = Uuid::new_v4();
         sqlx::query(
             "
@@ -89,8 +90,9 @@ impl SmartHouse {
         .bind(room_id)
         .bind(room_name.as_str())
         .bind(self.id)
-        .execute(&self.pool)
+        .execute(&mut tx)
         .await?;
+        tx.commit().await?;
 
         Ok(Room {
             id: room_id,
@@ -337,6 +339,7 @@ impl Room {
             return Err(Error::IllegalThermometerName(thermometer_name));
         }
 
+        let mut tx = self.pool.begin().await?;
         let thermometer_id = Uuid::new_v4();
         sqlx::query(
             "
@@ -347,8 +350,9 @@ impl Room {
         .bind(thermometer_name.as_str())
         .bind(self.id)
         .bind(temperature)
-        .execute(&self.pool)
+        .execute(&mut tx)
         .await?;
+        tx.commit().await?;
 
         Ok(ThermometerInfo::new(
             thermometer_id,
@@ -518,6 +522,14 @@ impl RoomInfo {
             name: room.name,
             thermometers,
         })
+    }
+
+    ///
+    /// Получить идкнтификатор комнаты умного дома.
+    ///
+    #[inline]
+    pub fn room_id(&self) -> Uuid {
+        self.id
     }
 }
 

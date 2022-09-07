@@ -29,8 +29,8 @@ pub enum Error {
     #[error("illegal thermometer name {0}")]
     IllegalThermometerName(String),
 
-    #[error("unexpected message")]
-    UnexpectedMessage,
+    #[error("bad request")]
+    BadRequest,
 
     #[error("io error {0}")]
     IOError(#[from] std::io::Error),

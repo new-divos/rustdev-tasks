@@ -10,11 +10,11 @@ pub mod thermometer;
 /// Структура с описанием статуса успешно выполненной операции.
 ///
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub(crate) struct RequestSuccess {
+pub struct Success {
     status: String,
 }
 
-impl RequestSuccess {
+impl Success {
     ///
     /// Создать сообщение со статусом успешно выполненной операции.
     ///
@@ -23,6 +23,14 @@ impl RequestSuccess {
         Self {
             status: message.as_ref().to_string(),
         }
+    }
+
+    ///
+    /// Получить сообщение со статусом успешно выполненного запроса.
+    ///
+    #[inline]
+    pub fn status(&self) -> &str {
+        self.status.as_str()
     }
 }
 

@@ -24,6 +24,7 @@ async fn main() -> Result<()> {
                 web::scope("/rooms")
                     .route("", web::post().to(routes::room::new_room))
                     .route("", web::get().to(routes::room::all_rooms))
+                    .route("", web::delete().to(routes::room::delete_rooms))
                     .service(
                         web::scope("/{room_id}")
                             .route("", web::get().to(routes::room::get_room))

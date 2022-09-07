@@ -7,7 +7,7 @@ use crate::{
         thermometer::{NewThermometer, ThermometerData, ThermometersInfo},
     },
     error::Error,
-    routes::RequestSuccess,
+    routes::Success,
 };
 
 ///
@@ -63,7 +63,7 @@ pub async fn delete_thermometer(
     let (room_id, thermometer_id) = *ids;
     let room = house.into_inner().get_room(room_id).await?;
     room.delete_thermometer(thermometer_id).await?;
-    Ok(HttpResponse::Ok().json(RequestSuccess::new(format!(
+    Ok(HttpResponse::Ok().json(Success::new(format!(
         "the thermometer {} of the room {} was deleted",
         thermometer_id, room_id
     ))))

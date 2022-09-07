@@ -24,6 +24,17 @@ pub struct NewThermometer {
 
 impl NewThermometer {
     ///
+    ///
+    ///
+    #[inline]
+    pub fn new<S: AsRef<str>>(name: S, temperature: f64) -> Self {
+        Self {
+            name: name.as_ref().to_string(),
+            temperature,
+        }
+    }
+
+    ///
     /// Получить имя нового термометра.
     ///
     #[inline]

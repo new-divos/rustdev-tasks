@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::{
     db::model::house::{HouseInfo, NewRoom, RoomData, RoomInfo, SmartHouse},
     error::Error,
-    routes::RequestSuccess,
+    routes::Success,
 };
 
 ///
@@ -43,7 +43,7 @@ pub async fn all_rooms(house: web::Data<SmartHouse>) -> Result<HttpResponse, Err
 ///
 pub async fn delete_rooms(house: web::Data<SmartHouse>) -> Result<HttpResponse, Error> {
     house.into_inner().delete_rooms().await?;
-    Ok(HttpResponse::Ok().json(RequestSuccess::new("all house rooms were deleted")))
+    Ok(HttpResponse::Ok().json(Success::new("all house rooms were deleted")))
 }
 
 ///
@@ -65,10 +65,7 @@ pub async fn delete_room(
     room_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     house.into_inner().delete_room(*room_id).await?;
-    Ok(HttpResponse::Ok().json(RequestSuccess::new(format!(
-        "the room {} was deleted",
-        *room_id
-    ))))
+    Ok(HttpResponse::Ok().json(Success::new(format!("the room {} was deleted", *room_id))))
 }
 
 ///
