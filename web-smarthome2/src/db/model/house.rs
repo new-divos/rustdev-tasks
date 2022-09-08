@@ -27,13 +27,6 @@ pub struct SmartHouse {
     house_name: String,
 
     ///
-    /// Список комнат умного дома.
-    ///
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(flatten)]
-    rooms: Option<SmartRoom>,
-
-    ///
     /// Пул запросов.
     ///
     #[serde(skip)]
@@ -60,7 +53,6 @@ impl SmartHouse {
         Ok(Self {
             house_id: config.house_id(),
             house_name: config.house_name().to_string(),
-            rooms: None,
             pool: Some(pool),
         })
     }
@@ -182,7 +174,7 @@ impl SmartHouse {
     ///
     /// Удалить все комнаты умного дома.
     ///
-    pub async fn delete(&mut self) -> Result<(), Error> {
+    pub async fn delete(&self) -> Result<(), Error> {
         if let Some(ref pool) = self.pool {
             let mut tx = pool.begin().await?;
 
@@ -196,8 +188,6 @@ impl SmartHouse {
             .await?;
 
             tx.commit().await?;
-            self.rooms = None;
-
             Ok(())
         } else {
             Err(Error::DataIntegrityError)

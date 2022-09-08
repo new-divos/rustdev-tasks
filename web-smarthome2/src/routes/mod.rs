@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{db::model::house::SmartHouse, error::ErrorInfo};
 
+pub mod devices;
+pub mod rooms;
+
 ///
 /// Структура с описанием статуса успешно выполненной операции.
 ///

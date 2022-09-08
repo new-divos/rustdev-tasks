@@ -22,34 +22,27 @@ async fn main() -> Result<()> {
             .default_service(web::route().to(routes::not_found))
             .service(
                 web::scope("/rooms")
-                    .route("", web::post().to(routes::room::new_room))
-                    .route("", web::get().to(routes::room::all_rooms))
-                    .route("", web::delete().to(routes::room::delete_rooms))
+                    .route("", web::post().to(routes::rooms::new))
+                    .route("", web::get().to(routes::rooms::all))
+                    .route("", web::delete().to(routes::rooms::delete_all))
                     .service(
                         web::scope("/{room_id}")
-                            .route("", web::get().to(routes::room::get_room))
-                            .route("", web::delete().to(routes::room::delete_room))
-                            .route("", web::put().to(routes::room::update_room))
+                            .route("", web::get().to(routes::rooms::get))
+                            .route("", web::delete().to(routes::rooms::delete))
+                            .route("", web::put().to(routes::rooms::update))
                             .service(
-                                web::scope("/thermometers")
-                                    .route("", web::post().to(routes::thermometer::new_thermometer))
-                                    .route("", web::get().to(routes::thermometer::all_thermometers))
+                                web::scope("/devices")
+                                    .route("/socket", web::post().to(routes::devices::new_socket))
+                                    .route(
+                                        "/thermometer",
+                                        web::post().to(routes::devices::new_thermometer),
+                                    )
+                                    .route("", web::get().to(routes::devices::all))
                                     .service(
-                                        web::scope("/{thermometer_id}")
-                                            .route(
-                                                "",
-                                                web::get().to(routes::thermometer::get_thermometer),
-                                            )
-                                            .route(
-                                                "",
-                                                web::delete()
-                                                    .to(routes::thermometer::delete_thermometer),
-                                            )
-                                            .route(
-                                                "",
-                                                web::put()
-                                                    .to(routes::thermometer::update_thermometer),
-                                            ),
+                                        web::scope("/{device_id}")
+                                            .route("", web::get().to(routes::devices::get))
+                                            .route("", web::delete().to(routes::devices::delete))
+                                            .route("", web::put().to(routes::devices::update)),
                                     ),
                             ),
                     ),
