@@ -98,6 +98,14 @@ pub async fn delete_all(house: web::Data<SmartHouse>) -> Result<HttpResponse, Er
 }
 
 ///
+/// Получить отчет для умного дома.
+///
+pub async fn report(house: web::Data<SmartHouse>) -> Result<HttpResponse, Error> {
+    let info = house.into_inner().info().await?;
+    Ok(HttpResponse::Ok().json(Info::new(info)))
+}
+
+///
 /// Получить информацию о комнате умного дома.
 ///
 pub async fn get(house: web::Data<SmartHouse>, id: web::Path<Uuid>) -> Result<HttpResponse, Error> {
@@ -139,4 +147,18 @@ pub async fn update(
 
     room.load().await?;
     Ok(HttpResponse::Ok().json(room))
+}
+
+///
+/// Получить отчет для комнаты с заданным идентификатором.
+///
+pub async fn info(
+    house: web::Data<SmartHouse>,
+    id: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let room_id = *id;
+    let mut room = house.into_inner().get(room_id)?;
+    room.load().await?;
+
+    Ok(HttpResponse::Ok().json(Info::new(format!("{room}"))))
 }

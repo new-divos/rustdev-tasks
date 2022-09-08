@@ -25,11 +25,13 @@ async fn main() -> Result<()> {
                     .route("", web::post().to(routes::rooms::new))
                     .route("", web::get().to(routes::rooms::all))
                     .route("", web::delete().to(routes::rooms::delete_all))
+                    .route("/info", web::get().to(routes::rooms::report))
                     .service(
                         web::scope("/{room_id}")
                             .route("", web::get().to(routes::rooms::get))
                             .route("", web::delete().to(routes::rooms::delete))
                             .route("", web::put().to(routes::rooms::update))
+                            .route("/info", web::get().to(routes::rooms::info))
                             .service(
                                 web::scope("/devices")
                                     .route("/socket", web::post().to(routes::devices::new_socket))
@@ -42,7 +44,8 @@ async fn main() -> Result<()> {
                                         web::scope("/{device_id}")
                                             .route("", web::get().to(routes::devices::get))
                                             .route("", web::delete().to(routes::devices::delete))
-                                            .route("", web::put().to(routes::devices::update)),
+                                            .route("", web::put().to(routes::devices::update))
+                                            .route("/info", web::get().to(routes::devices::info)),
                                     ),
                             ),
                     ),

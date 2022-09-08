@@ -1,6 +1,9 @@
+use std::fmt;
+
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+use statrs::distribution::Normal;
 use uuid::Uuid;
 
 use crate::{
@@ -69,6 +72,33 @@ pub struct SmartRoom {
     ///
     #[serde(skip)]
     pool: Option<SqlitePool>,
+}
+
+impl fmt::Display for SmartRoom {
+    ///
+    /// Получить отчет о комнате умного дома.
+    ///
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref data) = self.data {
+            let mut report = vec![format!(
+                "Комната {} ({}) умного дома {}:",
+                self.room_id,
+                data.name.as_str(),
+                self.house_id
+            )];
+            for (i, device) in data.devices.iter().enumerate() {
+                report.push(format!("  {}. {}", i + 1, device));
+            }
+
+            write!(f, "{}", report.join("\n"))
+        } else {
+            write!(
+                f,
+                "Отсутствуют сведения для комнаты {} умного дома {}",
+                self.room_id, self.house_id
+            )
+        }
+    }
 }
 
 impl SmartRoom {
@@ -244,6 +274,9 @@ impl SmartRoom {
     ///
     pub async fn all(&self) -> Result<Vec<SmartDevice>, Error> {
         if let Some(ref pool) = self.pool {
+            let mut rng = thread_rng();
+            let normal = Normal::new(0.0, 1.0).unwrap();
+
             let mut devices = sqlx::query_as::<_, SmartSocketRow>(
                 "
             SELECT * FROM sockets WHERE room_id = $1;
@@ -254,13 +287,19 @@ impl SmartRoom {
             .await?
             .into_iter()
             .map(|r| {
+                let power = if r.state {
+                    r.power + rng.sample(normal)
+                } else {
+                    0.0
+                };
+
                 SmartDevice::with_data(
                     r.id,
                     r.room_id,
                     SmartDeviceData::Socket {
                         name: r.name,
                         state: r.state,
-                        power: r.power,
+                        power,
                     },
                     pool.clone(),
                 )
@@ -283,7 +322,7 @@ impl SmartRoom {
                         r.room_id,
                         SmartDeviceData::Thermometer {
                             name: r.name,
-                            temperature: r.temperature,
+                            temperature: r.temperature + rng.sample(normal),
                         },
                         pool.clone(),
                     )

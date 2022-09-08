@@ -1,6 +1,8 @@
 #![allow(clippy::collapsible_match)]
 #![allow(clippy::single_match)]
 
+use std::fmt;
+
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
@@ -133,6 +135,51 @@ pub struct SmartDevice {
     ///
     #[serde(skip)]
     pool: Option<SqlitePool>,
+}
+
+impl fmt::Display for SmartDevice {
+    ///
+    /// Получить отчет об умном устройстве.
+    ///
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref data) = self.data {
+            match data {
+                SmartDeviceData::Socket { name, state, power } => {
+                    if *state {
+                        write!(
+                            f,
+                            "Умная розетка {} ({}) в комнате {}. Включена, потребляемая мощность: {} Вт.",
+                            self.device_id, name, self.room_id, *power
+                        )
+                    } else {
+                        write!(
+                            f,
+                            "Умная розетка {} ({}) в комнате {}. Выключена.",
+                            self.device_id, name, self.room_id
+                        )
+                    }
+                }
+
+                SmartDeviceData::Thermometer { name, temperature } => write!(
+                    f,
+                    "Умный термометр {} ({}) в комнате {}. Показания термометра: {} °C.",
+                    self.device_id, name, self.room_id, *temperature
+                ),
+
+                SmartDeviceData::Unknown => write!(
+                    f,
+                    "Неизвестное умное устройство {} в комнате {}.",
+                    self.device_id, self.room_id
+                ),
+            }
+        } else {
+            write!(
+                f,
+                "Отсутствуют сведения для умного устройства {} в комнате {}.",
+                self.device_id, self.room_id
+            )
+        }
+    }
 }
 
 impl SmartDevice {

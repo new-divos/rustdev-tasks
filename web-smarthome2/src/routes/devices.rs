@@ -199,3 +199,18 @@ pub async fn update(
     device.load().await?;
     Ok(HttpResponse::Ok().json(device))
 }
+
+///
+/// Получить отчет для устройства с заданным идентификатором.
+///
+pub async fn info(
+    house: web::Data<SmartHouse>,
+    ids: web::Path<(Uuid, Uuid)>,
+) -> Result<HttpResponse, Error> {
+    let (room_id, device_id) = *ids;
+    let room = house.into_inner().get(room_id)?;
+    let mut device = room.get(device_id)?;
+    device.load().await?;
+
+    Ok(HttpResponse::Ok().json(Info::new(format!("{device}"))))
+}

@@ -193,4 +193,40 @@ impl SmartHouse {
             Err(Error::DataIntegrityError)
         }
     }
+
+    ///
+    /// Получить отчет о состоянии умного дома.
+    ///
+    pub async fn info(&self) -> Result<String, Error> {
+        let rooms = self.all().await?;
+
+        let mut report = vec![format!(
+            "Умный дом {} ({}):",
+            self.house_id,
+            self.house_name.as_str()
+        )];
+        for (i, room) in rooms.iter().enumerate() {
+            if let Some(ref data) = room.data {
+                report.push(format!(
+                    "  {}. Комната {} ({}) умного дома {}:",
+                    i + 1,
+                    room.room_id(),
+                    data.name.as_str(),
+                    room.house_id()
+                ));
+                for (j, device) in data.devices.iter().enumerate() {
+                    report.push(format!("    {}.{}. {}", i + 1, j + 1, device));
+                }
+            } else {
+                report.push(format!(
+                    "  {}. Отсутствуют сведения для комнаты {} умного дома {}.",
+                    i + 1,
+                    room.room_id(),
+                    room.house_id()
+                ))
+            }
+        }
+
+        Ok(report.join("\n"))
+    }
 }
