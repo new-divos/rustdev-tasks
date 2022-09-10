@@ -7,4 +7,5 @@ members = [
     "xml-builder",
     "bytes-wrappers",
     "web-smarthome2",
+    "smartsocket-gui",
 ]

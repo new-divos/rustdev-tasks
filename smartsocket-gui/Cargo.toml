@@ -1,0 +1,11 @@
+[package]
+name = "smartsocket-gui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+directories = "^4"
+iced = {version = "0.4.2", default-features = false, features = ["glow", "pure"]}
+serde = {version = "^1.0", features = ["derive"]}
+smarthome2 = {path = "../smarthome2"}
+toml = "^0.5"
