@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "^1.0"
 directories = "^4"
-iced = {version = "0.4.2", default-features = false, features = ["glow", "pure"]}
+iced = {version = "0.4.2", default-features = false, features = ["glow"]}
 serde = {version = "^1.0", features = ["derive"]}
 smarthome2 = {path = "../smarthome2"}
+thiserror = "^1.0"
 toml = "^0.5"
