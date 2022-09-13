@@ -1,0 +1,13 @@
+[package]
+name = "py-smartsocket"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "pysmartsocket"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "^0.17", features = ["extension-module"] }
+smarthome2 = {path = "../smarthome2"}
+thiserror = "^1.0"

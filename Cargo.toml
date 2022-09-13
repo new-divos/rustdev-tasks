@@ -8,4 +8,5 @@ members = [
     "bytes-wrappers",
     "web-smarthome2",
     "smartsocket-gui",
+    "py-smartsocket"
 ]
